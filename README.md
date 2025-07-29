@@ -33,3 +33,26 @@ Afișează toate informațiile disponibile despre nodul cu ID-ul [id-ul folderul
 7. Navigare după path
 
 Navighează la calea /Company Home/Documente.
+
+## Pornire imagine docker openwebui
+
+docker run -d \
+  -p 3000:3000 \
+  -v openwebui-data:/app/backend/data \
+  -e PORT=3000 \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:8001/v1 \
+  -e OPENAI_API_KEY=sk-anything \
+  -e WEBUI_SECRET_KEY=your-secret-key \
+  --add-host=host.docker.internal:host-gateway \
+  --name openwebui \
+  ghcr.io/open-webui/open-webui:main
+
+## Adaugare model in openwebui
+
+OpenAI API \
+API Base URL: http://localhost:8001/v1 \
+API Key: sk-any-key (orice string, nu e validat)
+
+## Schemă Bloc software
+
+![Schema_Bloc](Schema_bloc.svg)

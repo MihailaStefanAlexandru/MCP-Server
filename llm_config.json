@@ -1,0 +1,21 @@
+{
+  "llm": {
+    "provider": "openai",
+    "api_key": "placeholder",
+    "model": "gpt-3.5-turbo"
+  },
+  "alfresco": {
+    "url": "http://localhost:8080",
+    "user": "admin",
+    "password": "admin"
+  },
+  "mcp": {
+    "server_script": "/mnt/d/Programare/MCP-Server/start_mcp_server.sh",
+    "server_path": "/mnt/d/Programare/MCP-Server/alfresco_mcp_server.py"
+  },
+  "settings": {
+    "max_tokens": 250,
+    "temperature": 0.7,
+    "context_history": 5
+  }
+}

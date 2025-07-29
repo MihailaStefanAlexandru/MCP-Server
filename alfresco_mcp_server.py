@@ -100,7 +100,7 @@ class MinimalAlfrescoServer:
                         "properties": {
                             "maxItems": {
                                 "type": "integer",
-                                "description": "Numărul maxim de elemente de returnat (default: 20)",
+                                "description": "Numărul maxim de elemente de returnat (default: 10)",
                                 "default": 20
                             }
                         }
@@ -203,16 +203,21 @@ class MinimalAlfrescoServer:
         
         @self.server.call_tool()
         async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[types.TextContent]:
-            """Execută tool-urile pentru configurația minimală"""
+            """Execută tool-urile cu răspunsuri optimizate pentru TinyLlama"""
             try:
-                # Conectarea lazy - doar când e nevoie
                 if not self.connection_tested:
                     await self.ensure_connection()
                 
+                result = None
+                context = ""
+                
                 if name == "list_root_children":
-                    result = await self.list_root_children(arguments.get("maxItems", 20))
+                    result = await self.list_root_children(min(arguments.get("maxItems", 10), 10))
+                    context = "root folder"
                 elif name == "get_node_children":
-                    result = await self.get_node_children(arguments["node_id"], arguments.get("maxItems", 20))
+                    node_id = arguments["node_id"]
+                    result = await self.get_node_children(node_id, min(arguments.get("maxItems", 10), 10))
+                    context = f"folder {node_id}"
                 elif name == "create_folder":
                     result = await self.create_folder(
                         arguments["name"],
@@ -220,31 +225,43 @@ class MinimalAlfrescoServer:
                         arguments.get("title"),
                         arguments.get("description")
                     )
+                    context = "folder creation"
                 elif name == "get_node_info":
                     result = await self.get_node_info(arguments["node_id"])
+                    context = "node information"
                 elif name == "delete_node":
                     result = await self.delete_node(arguments["node_id"], arguments.get("permanent", False))
+                    context = "node deletion"
                 elif name == "browse_by_path":
                     result = await self.browse_by_path(arguments.get("path", "/"))
+                    context = f"path {arguments.get('path', '/')}"
                 else:
-                    return [types.TextContent(type="text", text=f"Tool necunoscut: {name}")]
+                    return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
                 
-                return [types.TextContent(type="text", text=json.dumps(result, indent=2, ensure_ascii=False))]
+                # Formatează pentru TinyLlama
+                formatted_result = self.format_simple_response(result, context)
+                
+                # Răspuns mai concis
+                response_text = json.dumps(formatted_result, indent=1, ensure_ascii=False)
+                
+                return [types.TextContent(type="text", text=response_text)]
             
             except Exception as e:
-                error_msg = f"Eroare la executarea {name}: {str(e)}"
-                print(f"❌ {error_msg}", file=sys.stderr)
-                return [types.TextContent(type="text", text=error_msg)]
-    
+                error_msg = f"Error in {name}: {str(e)}"
+                return [types.TextContent(type="text", text=json.dumps({
+                    "error": True,
+                    "message": error_msg,
+                    "tool": name
+                }, indent=1))]
+
     async def ensure_connection(self):
-        """Asigură că avem o conexiune validă"""
+        """Conexiune optimizată pentru modele rapide"""
         if not self.client:
             self.client = httpx.AsyncClient(
-                timeout=httpx.Timeout(15.0, connect=10.0),  # Timeout mai mare pentru configurația minimală
+                timeout=httpx.Timeout(8.0, connect=5.0),  # Timeout-uri mai mici
                 follow_redirects=True
             )
             
-            # Folosim Basic Auth direct
             auth_string = base64.b64encode(f'{self.username}:{self.password}'.encode()).decode()
             self.client.headers.update({
                 "Authorization": f"Basic {auth_string}",
@@ -253,16 +270,15 @@ class MinimalAlfrescoServer:
             })
         
         if not self.connection_tested:
-            # Testăm cu endpoint-ul de noduri (nu sites care poate să nu existe)
             try:
                 test_url = urljoin(self.base_url, "/alfresco/api/-default-/public/alfresco/versions/1/nodes/-root-")
                 response = await self.client.get(test_url)
                 response.raise_for_status()
                 self.connection_tested = True
-                print("✅ Conexiune Alfresco minimal validată", file=sys.stderr)
+                # Log mai concis pentru TinyLlama
+                print("✅ Alfresco connected", file=sys.stderr)
             except Exception as e:
-                print(f"❌ Eroare la validarea conexiunii Alfresco minimal: {e}", file=sys.stderr)
-                raise Exception(f"Nu pot conecta la Alfresco minimal ({self.base_url}): {str(e)}")
+                raise Exception(f"Cannot connect to Alfresco: {str(e)}")
     
     async def list_root_children(self, max_items: int = 20) -> Dict[str, Any]:
         """Listează conținutul root-ului"""
@@ -399,7 +415,17 @@ class MinimalAlfrescoServer:
         
         return {
             "node": info,
-            "message": f"Informații pentru nodul '{node.get('name')}'"
+            "message": f"Informații pentru nodul '{node.get('name')}'",
+            "items": [
+                {"label": "ID", "value": node.get("id")},
+                {"label": "Tip", "value": "folder" if node.get("isFolder") else "file"},
+                {"label": "Tip nod", "value": node.get("nodeType")},
+                {"label": "Creat la", "value": node.get("createdAt")},
+                {"label": "Modificat la", "value": node.get("modifiedAt")},
+                {"label": "Creat de", "value": node.get("createdByUser", {}).get("displayName")},
+                {"label": "Modificat de", "value": node.get("modifiedByUser", {}).get("displayName")},
+                {"label": "ID Părinte", "value": node.get("parentId")}
+            ]
         }
     
     async def delete_node(self, node_id: str, permanent: bool = False) -> Dict[str, Any]:
@@ -457,6 +483,41 @@ class MinimalAlfrescoServer:
                 "error": True,
                 "message": f"Nu pot naviga la path-ul '{path}': {str(e)}. În configurația minimală, folosește tool-ul 'get_node_children' cu ID-uri specifice."
             }
+        
+    def format_simple_response(self, result: Any, context: str = "") -> Dict[str, Any]:
+        """Formatează un răspuns simplificat, text-based, pentru modele LLM mici"""
+        if isinstance(result, dict):
+            message = result.get("message", "")
+            items = result.get("items", []) if isinstance(result.get("items", []), list) else []
+
+            simplified_items = []
+            for item in items:
+                if "name" in item and "type" in item:
+                    name = item.get("name", "")
+                    node_type = item.get("type", "")
+                    node_id = item.get("id", "")
+                    simplified_items.append(f"- {name} [{node_type}] (ID: {node_id})")
+                elif "label" in item and "value" in item:
+                    # E o informație cheie-valoare
+                    simplified_items.append(f"{item['label']}: {item['value']}")
+
+            return {
+                "context": context,
+                "summary": message,
+                "items": simplified_items
+            }
+
+        elif isinstance(result, str):
+            return {
+                "context": context,
+                "text": result
+            }
+
+        else:
+            return {
+                "context": context,
+                "data": result
+            }
     
     async def cleanup(self):
         """Curăță resursele"""
@@ -474,8 +535,8 @@ async def main():
     setup_virtual_env()
     
     # Configurare de bază
-    alfresco_url = os.getenv("ALFRESCO_URL", "http://172.17.253.147:8080")
-    alfresco_user = os.getenv("ALFRESCO_USER", "admin") 
+    alfresco_url = os.getenv("ALFRESCO_URL", "http://localhost:8080")
+    alfresco_user = os.getenv("ALFRESCO_USER", "admin")
     alfresco_password = os.getenv("ALFRESCO_PASSWORD", "admin")
     
     # Log pentru debugging
