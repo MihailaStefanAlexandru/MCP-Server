@@ -1,7 +1,7 @@
 {
   "llm": {
     "provider": "openai",
-    "api_key": "placeholder",
+    "api_key": "${{ secrets.OPENAI_API_KEY }}",
     "model": "gpt-3.5-turbo"
   },
   "alfresco": {
