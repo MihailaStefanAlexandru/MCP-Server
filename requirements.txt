@@ -27,6 +27,7 @@ httpx==0.28.1
 httpx-sse==0.4.1
 huggingface-hub==0.33.4
 idna==3.10
+iniconfig==2.1.0
 Jinja2==3.1.6
 jiter==0.10.0
 jsonschema==4.25.0
@@ -54,6 +55,7 @@ nvidia-nvjitlink-cu12==12.6.85
 nvidia-nvtx-cu12==12.6.77
 openai==1.97.1
 packaging==25.0
+pluggy==1.6.0
 proto-plus==1.26.1
 protobuf==5.29.5
 pyasn1==0.6.1
@@ -63,6 +65,8 @@ pydantic-settings==2.10.1
 pydantic_core==2.33.2
 Pygments==2.19.2
 pyparsing==3.2.3
+pytest==8.4.1
+pytest-asyncio==1.1.0
 python-dotenv==1.1.1
 python-multipart==0.0.20
 PyYAML==6.0.2
