@@ -33,4 +33,4 @@ jobs:
           python3 -m py_compile adapter.py universal_llm_client.py alfresco_mcp_server.py Clase/*.py
 
       - name: Run tests
-        run: pytest tests/
+        run: pytest
