@@ -279,6 +279,40 @@ async def test_browse_by_path_root(server):
     assert result["items"][0]["name"] == "RootFile"
 
 @pytest.mark.asyncio
+async def test_get_node_id_by_name(server):
+    
+    mock_items = {
+        "items": [
+            {
+                "id": "folder-001",
+                "name": "TestFolder",
+                "type": "folder"
+            },
+            {
+                "id": "file-001",
+                "name": "TestFile.txt",
+                "type": "file"
+            }
+        ]
+    }
+
+    server.get_node_children = AsyncMock(return_value=mock_items)
+
+    # test folder
+    result_folder = await server.get_node_id_by_name("TestFolder")
+    assert result_folder["id"] == "folder-001"
+    assert result_folder["type"] == "folder"
+
+    # test file
+    result_folder = await server.get_node_id_by_name("TestFile.txt")
+    assert result_folder["id"] == "file-001"
+    assert result_folder["type"] == "file"
+
+    # test negasit
+    result_missing = await server.get_node_id_by_name("Inexistent")
+    assert result_missing["error"] is True
+
+@pytest.mark.asyncio
 async def test_format_simple_response(server):
 
     raw = {

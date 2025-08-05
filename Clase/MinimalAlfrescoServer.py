@@ -123,6 +123,20 @@ class MinimalAlfrescoServer:
                     }
                 ),
                 Tool(
+                    name="get_node_id_by_name",
+                    description="Returnează ID-ul unui fișier sau folder Alfresco după nume (căutare în root)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Numele nodului (fișier sau folder)"
+                            }
+                        },
+                        "required": ["name"]
+                    }
+                ),
+                Tool(
                     name="browse_by_path",
                     description="Navighează la un folder folosind calea (path) în loc de ID",
                     inputSchema={
@@ -169,6 +183,9 @@ class MinimalAlfrescoServer:
                 elif name == "delete_node":
                     result = await self.delete_node(arguments["node_id"], arguments.get("permanent", False))
                     context = "node deletion"
+                elif name == "get_node_id_by_name":
+                    result = await self.get_node_id_by_name(arguments["name"])
+                    context = f"node ID for name '{arguments['name']}'"
                 elif name == "browse_by_path":
                     result = await self.browse_by_path(arguments.get("path", "/"))
                     context = f"path {arguments.get('path', '/')}"
@@ -381,6 +398,22 @@ class MinimalAlfrescoServer:
             "node_id": node_id,
             "permanent": permanent,
             "message": f"Nodul {node_id} a fost șters {'permanent' if permanent else '(în trash)'}"
+        }
+    
+    async def get_node_id_by_name(self, name: str) -> Dict[str, Any]:
+        """Caută în root node-ul cu un anumit nume și returnează ID-ul său"""
+        children = await self.get_node_children("-root-", 30)
+        for item in children.get("items", []):
+            if item["name"] == name:
+                return {
+                    "id": item["id"],
+                    "name": item["name"],
+                    "type": item["type"],
+                    "message": f"Nodul '{name}' are ID-ul: {item['id']} (tip: {item['type']})"
+                }
+        return {
+            "error": True,
+            "message": f"Nodul '{name}' nu a fost găsit în root"
         }
     
     async def browse_by_path(self, path: str = "/") -> Dict[str, Any]:
