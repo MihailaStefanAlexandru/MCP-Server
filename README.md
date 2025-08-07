@@ -60,6 +60,7 @@ API Key: sk-any-key (orice string, nu e validat)
 system prompt
 context pentru functii
 
+```
 system_prompt = {
             "role": "system",
             "content": (
@@ -75,3 +76,4 @@ system_prompt = {
                 "Respond ONLY with the appropriate tool call."
             )
         }
+```
