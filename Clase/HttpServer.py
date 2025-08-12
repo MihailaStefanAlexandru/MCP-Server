@@ -2,9 +2,6 @@
 Server MCP pentru Alfresco - versiune HTTP REST API
 """
 import asyncio
-import sys
-import os
-import json
 import uvicorn
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException, Request
