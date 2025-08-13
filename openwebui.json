@@ -1,1 +1,8 @@
-{"message":"OpenWebUI Adapter cu client LLM existent","version":"2.0.0","mcp_connected":true,"tools_count":6,"llm_provider":"openai","llm_model":"gpt-3.5-turbo"}
+{
+    "message": "OpenWebUI Adapter cu client LLM existent",
+    "version": "2.0.0",
+    "mcp_connected":true,
+    "tools_count": 6,
+    "llm_provider": "openai",
+    "llm_model": "gpt-3.5-turbo"
+}
