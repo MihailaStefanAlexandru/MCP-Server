@@ -10,8 +10,8 @@
     "password": "admin"
   },
   "mcp": {
-    "server_script": "/mnt/d/Programare/MCP-Server/start_mcp_server.sh",
-    "server_path": "/mnt/d/Programare/MCP-Server/alfresco_mcp_server.py"
+    "server_url": "http://localhost:8002",
+    "timeout": 30
   },
   "settings": {
     "max_tokens": 250,

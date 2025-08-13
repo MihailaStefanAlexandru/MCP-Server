@@ -5,10 +5,7 @@ Server MCP pentru Alfresco - versiune adaptată pentru configurația minimală
 import asyncio
 import sys
 import os
-from Clase.MinimalAlfrescoServer import MinimalAlfrescoServer
-
-from mcp.server.models import InitializationOptions
-from mcp.server import NotificationOptions
+from Clase.HttpServer import HTTPAlfrescoMCPServer
 
 def setup_virtual_env():
     """Detectează și activează virtual environment-ul automat"""
@@ -62,54 +59,28 @@ def setup_virtual_env():
     print("⚠️ Nu am găsit virtual environment. Folosesc Python global.", file=sys.stderr)
     return False
 
-async def main():
-    """Main pentru configurația minimală Alfresco"""
+def main():
+    """Main pentru serverul HTTP Alfresco MCP"""
     
     # Activează virtual environment-ul dacă există
     setup_virtual_env()
     
-    # Configurare de bază
+    # Configurare din environment variables
     alfresco_url = os.getenv("ALFRESCO_URL", "http://localhost:8080")
     alfresco_user = os.getenv("ALFRESCO_USER", "admin")
     alfresco_password = os.getenv("ALFRESCO_PASSWORD", "admin")
+    server_port = int(os.getenv("MCP_SERVER_PORT", "8002"))
+    server_host = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
     
-    # Print pentru debugging
-    print(f"🚀 Server MCP Alfresco MINIMAL pornit", file=sys.stderr)
-    print(f"📍 URL: {alfresco_url}", file=sys.stderr)
-    print(f"⚠️ LIMITĂRI: Nu sunt disponibile search, Share UI, transformări", file=sys.stderr)
-    
-    # Creează serverul minimal
-    server = MinimalAlfrescoServer(
+    # Creează și pornește serverul HTTP
+    server = HTTPAlfrescoMCPServer(
         base_url=alfresco_url,
         username=alfresco_user,
-        password=alfresco_password
+        password=alfresco_password,
+        port=server_port
     )
     
-    # Pornește serverul MCP
-    from mcp.server.stdio import stdio_server
-    
-    try:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.get_server().run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="minimal-alfresco-server",
-                    server_version="0.1.0",
-                    capabilities=server.get_server().get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={}
-                    )
-                )
-            )
-    except KeyboardInterrupt:
-        print("🛑 Server minimal oprit de user", file=sys.stderr)
-    except Exception as e:
-        error_msg = f"❌ Eroare în serverul MCP minimal: {e}"
-        print(error_msg, file=sys.stderr)
-        sys.exit(1)
-    finally:
-        await server.cleanup()
+    server.run(host=server_host)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
