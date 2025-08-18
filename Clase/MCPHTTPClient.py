@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Client MCP pentru comunicație HTTP
+Client MCP pentru comunicație HTTP - VERSIUNE CORECTATĂ
 """
 import os
 import sys
@@ -18,7 +18,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class MCPHTTPCLient:
+class MCPHTTPClient:
     def __init__(self, config_path: str):
         with open(config_path, 'r') as f:
             self.config = json.load(f)
@@ -42,10 +42,7 @@ class MCPHTTPCLient:
         self.session_id = str(uuid.uuid4())
 
         # Client HTTP pentru comunicația cu serverul MCP
-        self.http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(30.0, connect=10.0),
-            follow_redirects=True
-        )
+        self.http_client = None  # Va fi inițializat în metoda async
         
         # Session timing
         self.last_activity = time.time()
@@ -73,9 +70,19 @@ class MCPHTTPCLient:
             print("💡 Verifică API key-ul și conexiunea la internet")
             sys.exit(1)
 
+    async def _init_http_client(self):
+        """Inițializează clientul HTTP async"""
+        if not self.http_client:
+            self.http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(30.0, connect=10.0),
+                follow_redirects=True
+            )
+
     async def start_mcp_server_http(self):
         """Pornește serverul MCP HTTP și stabilește conexiunea"""
         try:
+            await self._init_http_client()
+            
             # Verifică dacă serverul rulează deja
             if await self.check_server_health():
                 print("✅ Serverul MCP HTTP rulează deja")
@@ -105,6 +112,8 @@ class MCPHTTPCLient:
     async def check_server_health(self) -> bool:
         """Verifică dacă serverul MCP HTTP este disponibil"""
         try:
+            if not self.http_client:
+                await self._init_http_client()
             response = await self.http_client.get(f"{self.mcp_server_url}/health")
             return response.status_code == 200
         except:
@@ -114,6 +123,9 @@ class MCPHTTPCLient:
         """Inițializează protocolul MCP prin HTTP"""
         try:
             print("🤝 Inițializez protocolul MCP prin HTTP...")
+            
+            if not self.http_client:
+                await self._init_http_client()
             
             # Trimite cererea de inițializare
             init_data = {
@@ -201,8 +213,6 @@ class MCPHTTPCLient:
             print(f"❌ Eroare obținere tool-uri HTTP: {e}")
             success = False
         
-        # Similar pentru resurse și prompt-uri...
-        
         return success
     
     async def call_mcp_tool_http(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -216,11 +226,14 @@ class MCPHTTPCLient:
         try:
             print(f"🔧 Apelez tool MCP HTTP: {tool_name}")
             
+            if not self.http_client:
+                await self._init_http_client()
+            
             # Trimite cererea de apelare tool
             call_request = {
                 "jsonrpc": "2.0",
                 "id": str(uuid.uuid4()),
-                "method": "tools/calls",
+                "method": "tools/call",
                 "params": {
                     "name": tool_name,
                     "arguments": arguments
@@ -247,12 +260,8 @@ class MCPHTTPCLient:
             print(f"❌ Eroare apelare tool MCP HTTP: {e}")
             return {"error": str(e)}
         
-    def analyze_intent_and_call_tools(self, user_input: str) -> str:
-        """Analizează intenția și apelează tool-urile - versiune sincronă care wrapped async"""
-        return asyncio.run(self._analyze_intent_and_call_tools_async(user_input))
-
-    async def _analyze_intent_and_call_tools_async(self, user_input: str) -> str:
-        """Versiunea async a analizei de intenție"""
+    async def analyze_intent_and_call_tools_async(self, user_input: str) -> str:
+        """Analizează intenția și apelează tool-urile - versiune async"""
         if not self.mcp_connected or not self.mcp_tools:
             return "ℹ️ Nu sunt conectat la serverul MCP HTTP sau nu sunt tool-uri disponibile."
         
@@ -290,7 +299,7 @@ Sau dacă nu este necesar un tool:
 
 IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
 
-        # Obține analiza de la LLM
+        # SOLUȚIA: Fă apelul LLM în mod sincron, nu cu await
         analysis_response = self.query_llm_with_retry(analysis_prompt, max_tokens=300)
         
         try:
@@ -339,7 +348,7 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
             return f"❌ Eroare în procesarea cererii pentru tool-urile MCP HTTP: {str(e)}"
         
     def query_llm_with_retry(self, prompt: str, max_tokens: int = 400, retries: int = 3) -> str:
-        """Interogează LLM cu retry logic"""
+        """Interogează LLM cu retry logic - FUNCȚIE SINCRONĂ"""
         for attempt in range(retries):
             try:
                 if attempt > 0:
@@ -356,7 +365,7 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
         return "❌ Eroare necunoscută"
 
     def _query_llm_single(self, prompt: str, max_tokens: int) -> str:
-        """O singură interogare LLM"""
+        """O singură interogare LLM - FUNCȚIE SINCRONĂ"""
         if self.provider == "openai":
             response = self.openai_client.chat.completions.create(
                 model=self.model,
@@ -416,6 +425,9 @@ Răspuns:"""
         print("🔍 Testez conexiunea MCP HTTP...")
         
         try:
+            if not self.http_client:
+                await self._init_http_client()
+                
             # Test health check
             health_ok = await self.check_server_health()
             if not health_ok:
@@ -434,9 +446,46 @@ Răspuns:"""
         except Exception as e:
             print(f"❌ Eroare test conexiune HTTP: {e}")
             return False
+
+    async def handle_user_input_async(self, user_input: str):
+        """Handler async pentru input-ul utilizatorului - SOLUȚIA PRINCIPALĂ"""
+        try:
+            print(f"🤖 {self.provider.title()} (procesez cu MCP HTTP...)")
+            start_time = time.time()
+            
+            # Analizează și apelează tool-uri MCP
+            tool_results = await self.analyze_intent_and_call_tools_async(user_input)
+            
+            # Creează prompt îmbunătățit
+            enhanced_prompt = self.create_enhanced_prompt(user_input, tool_results)
+            
+            # Obține răspunsul final - ATENȚIE: apel sincron
+            response = self.query_llm_with_retry(enhanced_prompt, max_tokens=500)
+            
+            processing_time = time.time() - start_time
+            print(f"🤖 {self.provider.title()} ({processing_time:.1f}s):")
+            
+            if tool_results and not any(msg in tool_results for msg in ["Nu pot interpreta", "Nu sunt conectat", "nu necesită"]):
+                print(f"   {tool_results}")
+            
+            print(f"   {response}")
+            
+            # Salvează în context
+            self.session_context.append({
+                "user": user_input,
+                "tool_results": tool_results,
+                "ai": response,
+                "timestamp": time.time()
+            })
+            
+            if len(self.session_context) > 5:
+                self.session_context.pop(0)
+                
+        except Exception as e:
+            print(f"❌ Eroare procesare input: {e}")
         
-    def interactive_session_http(self):
-        """Sesiune interactivă cu server MCP prin HTTP"""
+    async def interactive_session_http_async(self):
+        """Sesiune interactivă ASYNC cu server MCP prin HTTP - SOLUȚIA CORECTATĂ"""
         print(f"🤖 Client LLM pentru MCP Alfresco prin HTTP")
         print(f"⚡ Provider: {self.provider.upper()}")
         print(f"🧠 Model: {self.model}")
@@ -450,7 +499,8 @@ Răspuns:"""
 
         while self.running:
             try:
-                user_input = input("\n🔤 Tu: ").strip()
+                # Input non-blocking folosind threading
+                user_input = await self._get_user_input_async()
                 
                 if not user_input:
                     continue
@@ -476,39 +526,11 @@ Răspuns:"""
                     print(f"🌐 Server URL: {self.mcp_server_url}")
                     print(f"🔧 Tool-uri: {len(self.mcp_tools)}")
                     if self.mcp_connected:
-                        asyncio.run(self.test_mcp_connection_http())
+                        await self.test_mcp_connection_http()
                     continue
 
-                print(f"🤖 {self.provider.title()} (procesez cu MCP HTTP...)")
-                start_time = time.time()
-                
-                # Analizează și apelează tool-uri MCP
-                tool_results = self.analyze_intent_and_call_tools(user_input)
-                
-                # Creează prompt îmbunătățit
-                enhanced_prompt = self.create_enhanced_prompt(user_input, tool_results)
-                
-                # Obține răspunsul final
-                response = self.query_llm_with_retry(enhanced_prompt, max_tokens=500)
-                
-                processing_time = time.time() - start_time
-                print(f"🤖 {self.provider.title()} ({processing_time:.1f}s):")
-                
-                if tool_results and not any(msg in tool_results for msg in ["Nu pot interpreta", "Nu sunt conectat", "nu necesită"]):
-                    print(f"   {tool_results}")
-                
-                print(f"   {response}")
-                
-                # Salvează în context
-                self.session_context.append({
-                    "user": user_input,
-                    "tool_results": tool_results,
-                    "ai": response,
-                    "timestamp": time.time()
-                })
-                
-                if len(self.session_context) > 5:
-                    self.session_context.pop(0)
+                # Procesează input-ul utilizatorului
+                await self.handle_user_input_async(user_input)
                 
             except KeyboardInterrupt:
                 print("\n🛑 Întrerupt de utilizator")
@@ -518,6 +540,18 @@ Răspuns:"""
 
         self.running = False
         print(f"\n✅ Sesiune HTTP {self.provider} închisă!")
+
+    async def _get_user_input_async(self) -> str:
+        """Obține input de la utilizator în mod async"""
+        def get_input():
+            try:
+                return input("\n🔤 Tu: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                return "quit"
+        
+        # Rulează input în thread separat pentru a nu bloca event loop-ul
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, get_input)
 
     async def cleanup_http(self):
         """Curăță resursele HTTP"""
@@ -534,12 +568,4 @@ Răspuns:"""
         print("🧹 Resurse MCP HTTP curățate")
 
     def __del__(self):
-        if hasattr(self, 'http_client'):
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(self.cleanup_http())
-                else:
-                    asyncio.run(self.cleanup_http())
-            except Exception:
-                pass
+        pass

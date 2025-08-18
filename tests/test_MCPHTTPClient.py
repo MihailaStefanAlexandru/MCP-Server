@@ -10,7 +10,7 @@ import types
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Clase.MCPHTTPClient import MCPHTTPCLient
+from Clase.MCPHTTPClient import MCPHTTPClient
 
 @pytest.fixture()
 def temp_config(tmp_path):
@@ -35,8 +35,8 @@ def temp_config(tmp_path):
 def client(temp_config, monkeypatch):
 
     # Inlocuieşte iniţializarea reală cu OpenAi
-    monkeypatch.setattr(MCPHTTPCLient, "_init_llm_client", lambda self: None)
-    c = MCPHTTPCLient(temp_config)
+    monkeypatch.setattr(MCPHTTPClient, "_init_llm_client", lambda self: None)
+    c = MCPHTTPClient(temp_config)
     return c
 
 @respx.mock
@@ -225,7 +225,7 @@ async def test_analyze_intent_and_call_tools(client, monkeypatch):
         })
     )
 
-    res = await client._analyze_intent_and_call_tools_async("listeaza nodurile din root")
+    res = await client.analyze_intent_and_call_tools_async("listeaza nodurile din root")
     assert res.startswith("🔧 Rezultat list_nodes:\nOK")
 
 @pytest.mark.asyncio
@@ -235,7 +235,7 @@ async def test_analyze_intent_and_call_tools_no_tool(client, monkeypatch):
     client.mcp_tools = {"list_nodes": {"name": "list_nodes"}}
     monkeypatch.setattr(client, "query_llm_with_retry", lambda *a, **k: json.dumps({"action": "no_tool", "explanation": "n/a"}))
 
-    out = await client._analyze_intent_and_call_tools_async("spune un salut")
+    out = await client.analyze_intent_and_call_tools_async("spune un salut")
     assert out == "ℹ️ Cererea nu necesită apelarea unui tool MCP specific."
 
 
@@ -244,7 +244,7 @@ async def test_analyze_intent_missing_connection_or_tools(client):
 
     client.mcp_connected = False
     client.mcp_tools = {}
-    out = await client._analyze_intent_and_call_tools_async("orice")
+    out = await client.analyze_intent_and_call_tools_async("orice")
     assert out.startswith("ℹ️ Nu sunt conectat la serverul MCP HTTP")
 
 @pytest.mark.asyncio
@@ -382,20 +382,3 @@ async def test_cleanup_http(client):
     assert client.mcp_tools == {}
     assert client.mcp_resources == {}
     assert client.mcp_prompts == {}
-
-def test_del_calls_cleanup_without_warning(client, monkeypatch):
-    """Verificăm că __del__ nu dă warning și apelează cleanup"""
-
-    called = {}
-    async def fake_cleanup():
-        called["done"] = True
-   
-    client.cleanup_http = fake_cleanup
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    client.__del__()
-
-    # execută task-ul creat
-    loop.run_until_complete(asyncio.sleep(0))
-    assert "done" in called
-    loop.close()
