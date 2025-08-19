@@ -1,38 +1,34 @@
 #!/usr/bin/env python3
 """
-OpenWebUI Adapter - Versiune corectată pentru probleme de răspuns
+OpenWebUI Adapter pentru MCP HTTP - Versiune adaptată pentru comunicație HTTP
 """
 import asyncio
 import json
-import os
 import sys
 import time
 import uuid
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from Clase.OpenWebUI import OpenWebUIAdapter, ChatRequest
-import logging
+from Clase.OpenWebUI import OpenWebUIHTTPAdapter
+from Clase.OpenWebUI import ChatRequest
 
-# Import clientul LLM existent
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from universal_llm_client import MCPStdioLLMClient
-
-# Configurare logging mai detaliată
+# Configurare logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Instanța globală a adapter-ului
+# Instanța globală a adapter-ului HTTP
 openwebui_adapter = None
 
-# FastAPI App
+# FastAPI App pentru HTTP
 app = FastAPI(
-    title="OpenWebUI MCP Adapter (Corrigat)", 
-    version="2.2.0",
-    description="Adapter pentru integrarea OpenWebUI cu clientul LLM și serverul MCP Alfresco"
+    title="OpenWebUI MCP HTTP Adapter", 
+    version="3.0.0",
+    description="Adapter pentru integrarea OpenWebUI cu clientul LLM și serverul MCP Alfresco prin HTTP"
 )
 
 # CORS pentru OpenWebUI
@@ -46,40 +42,45 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Inițializează adapter-ul la pornire"""
+    """Inițializează adapter-ul HTTP la pornire"""
     global openwebui_adapter
     try:
-        openwebui_adapter = OpenWebUIAdapter()
-        logger.info("🚀 OpenWebUI Adapter corrigat pornit!")
+        openwebui_adapter = OpenWebUIHTTPAdapter()
+        logger.info("🚀 OpenWebUI HTTP Adapter pornit!")
+        
+        # Așteaptă puțin pentru inițializare
+        await asyncio.sleep(2)
         
         # Log configurația inițială
         if openwebui_adapter.is_healthy:
             status = await openwebui_adapter.get_mcp_status()
-            logger.info(f"📊 Status inițial: {status}")
+            logger.info(f"📊 Status HTTP inițial: {status}")
         
     except Exception as e:
-        logger.error(f"❌ Eroare la startup: {e}")
+        logger.error(f"❌ Eroare la startup HTTP: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Curăță resursele la oprire"""
+    """Curăță resursele HTTP la oprire"""
     global openwebui_adapter
     if openwebui_adapter:
-        openwebui_adapter.cleanup()
-        logger.info("🛑 OpenWebUI Adapter oprit")
+        await openwebui_adapter.cleanup()
+        logger.info("🛑 OpenWebUI HTTP Adapter oprit")
 
 @app.get("/")
 async def root():
-    """Endpoint de test îmbunătățit"""
+    """Endpoint de test îmbunătățit pentru HTTP"""
     global openwebui_adapter
     if not openwebui_adapter:
-        return {"error": "Adapter nu este inițializat"}
+        return {"error": "HTTP Adapter nu este inițializat"}
     
     status = await openwebui_adapter.get_mcp_status()
     return {
-        "message": "OpenWebUI Adapter corrigat cu client LLM existent",
-        "version": "2.2.0",
+        "message": "OpenWebUI HTTP Adapter cu client LLM prin HTTP",
+        "version": "3.0.0",
+        "connection_type": "HTTP",
         "mcp_connected": status.get("connected", False),
+        "mcp_server_url": status.get("server_url", "unknown"),
         "tools_count": status.get("tools_count", 0),
         "llm_provider": status.get("provider", "unknown"),
         "llm_model": status.get("model", "unknown"),
@@ -95,34 +96,34 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check pentru monitoring"""
+    """Health check pentru monitoring HTTP"""
     global openwebui_adapter
     
     if not openwebui_adapter:
-        raise HTTPException(status_code=503, detail="Adapter nu este inițializat")
+        raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
     status = await openwebui_adapter.get_mcp_status()
     
     if status.get("healthy") and status.get("connected"):
-        return {"status": "healthy", "details": status}
+        return {"status": "healthy", "connection_type": "HTTP", "details": status}
     else:
-        raise HTTPException(status_code=503, detail={"status": "unhealthy", "details": status})
+        raise HTTPException(status_code=503, detail={"status": "unhealthy", "connection_type": "HTTP", "details": status})
 
 @app.get("/v1/models")
 async def list_models():
-    """Lista modelelor pentru OpenWebUI"""
+    """Lista modelelor pentru OpenWebUI cu HTTP"""
     global openwebui_adapter
     
-    logger.info("📋 Solicitare listă modele")
+    logger.info("📋 Solicitare listă modele HTTP")
     
-    # Model de bază întotdeauna disponibil
+    # Model de bază HTTP
     base_model = {
-        "id": "alfresco-mcp-assistant",
+        "id": "alfresco-mcp-http-assistant",
         "object": "model", 
         "created": int(time.time()),
-        "owned_by": "mcp-adapter",
+        "owned_by": "mcp-http-adapter",
         "permission": [],
-        "root": "alfresco-mcp-assistant",
+        "root": "alfresco-mcp-http-assistant",
         "parent": None,
     }
     
@@ -135,81 +136,80 @@ async def list_models():
             
             if status.get("provider") and status.get("model"):
                 enhanced_model = {
-                    "id": f"alfresco-{status['provider']}-{status['model']}",
+                    "id": f"alfresco-http-{status['provider']}-{status['model']}",
                     "object": "model",
                     "created": int(time.time()), 
-                    "owned_by": f"mcp-{status['provider']}",
+                    "owned_by": f"mcp-http-{status['provider']}",
                     "permission": [],
-                    "root": f"alfresco-{status['provider']}-{status['model']}",
+                    "root": f"alfresco-http-{status['provider']}-{status['model']}",
                     "parent": None,
                 }
                 models.append(enhanced_model)
-                logger.info(f"➕ Adăugat model enhanced: {enhanced_model['id']}")
+                logger.info(f"➕ Adăugat model HTTP enhanced: {enhanced_model['id']}")
                 
         except Exception as e:
-            logger.error(f"❌ Eroare la obținerea modelelor: {e}")
+            logger.error(f"❌ Eroare la obținerea modelelor HTTP: {e}")
     
     response = {
         "object": "list",
         "data": models
     }
     
-    logger.info(f"✅ Returnez {len(models)} modele")
+    logger.info(f"✅ Returnez {len(models)} modele HTTP")
     return response
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatRequest):
     """
-    Endpoint principal pentru chat - cu suport pentru streaming
+    Endpoint principal pentru chat HTTP - cu suport pentru streaming
     """
     global openwebui_adapter
     
-    logger.info(f"💬 Primită cerere chat: model={request.model}, mesaje={len(request.messages)}, stream={request.stream}")
+    logger.info(f"💬 Primită cerere chat HTTP: model={request.model}, mesaje={len(request.messages)}, stream={request.stream}")
     
     if not openwebui_adapter:
-        logger.error("❌ Adapter nu este inițializat")
-        raise HTTPException(status_code=503, detail="Adapter nu este inițializat")
+        logger.error("❌ HTTP Adapter nu este inițializat")
+        raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
     # Validare cerere
     if not request.messages or len(request.messages) == 0:
-        logger.error("❌ Nu s-au primit mesaje")
+        logger.error("❌ Nu s-au primit mesaje pentru HTTP")
         raise HTTPException(status_code=400, detail="Nu s-au primit mesaje")
     
     # Dacă este cerere pentru streaming, folosim StreamingResponse
     if request.stream:
-        logger.info("🌊 Folosesc streaming response")
+        logger.info("🌊 Folosesc streaming HTTP response")
         return StreamingResponse(
-            stream_chat_response(request, openwebui_adapter),
+            stream_chat_response_http(request, openwebui_adapter),
             media_type="text/plain",
             headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
         )
     
-    # Răspuns standard (non-streaming)
+    # Răspuns standard HTTP (non-streaming)
     try:
         # Log mesajele pentru debugging
         for i, msg in enumerate(request.messages):
-            logger.info(f"  Mesaj {i}: {msg.role} - {msg.content[:50]}...")
+            logger.info(f"  Mesaj HTTP {i}: {msg.role} - {msg.content[:50]}...")
         
-        # Procesează chat-ul
+        # Procesează chat-ul prin HTTP
         start_time = time.time()
-        logger.info("🔄 Încep procesarea chat-ului...")
+        logger.info("🔄 Încep procesarea chat-ului HTTP...")
         
         response_content = await openwebui_adapter.process_chat_async(request.messages)
         
         process_time = time.time() - start_time
-        logger.info(f"⏱️ Procesarea a durat {process_time:.2f}s")
+        logger.info(f"⏱️ Procesarea HTTP a durat {process_time:.2f}s")
         
         # Validare răspuns
         if not response_content or not response_content.strip():
-            logger.error("❌ Răspuns gol de la procesare")
-            response_content = "❌ Nu am putut genera un răspuns. Verifică logs pentru detalii."
+            logger.error("❌ Răspuns gol de la procesare HTTP")
+            response_content = "❌ Nu am putut genera un răspuns prin HTTP. Verifică logs pentru detalii."
         
-        logger.info(f"📤 Pregătesc să returnez răspuns de {len(response_content)} caractere")
-        logger.debug(f"Răspuns final: {response_content[:200]}...")
+        logger.info(f"📤 Pregătesc să returnez răspuns HTTP de {len(response_content)} caractere")
         
         # Formatează răspunsul pentru OpenWebUI
         response = {
-            "id": f"chatcmpl-{uuid.uuid4()}",
+            "id": f"chatcmpl-http-{uuid.uuid4()}",
             "object": "chat.completion",
             "created": int(time.time()),
             "model": request.model,
@@ -230,15 +230,15 @@ async def chat_completions(request: ChatRequest):
             }
         }
         
-        logger.info(f"✅ Răspuns formatat cu succes pentru OpenWebUI")
+        logger.info(f"✅ Răspuns HTTP formatat cu succes pentru OpenWebUI")
         return response
         
     except Exception as e:
-        logger.error(f"❌ Eroare în chat completions: {e}", exc_info=True)
+        logger.error(f"❌ Eroare în chat completions HTTP: {e}", exc_info=True)
         
-        # Răspuns de fallback în caz de eroare
+        # Răspuns de fallback în caz de eroare HTTP
         error_response = {
-            "id": f"chatcmpl-{uuid.uuid4()}",
+            "id": f"chatcmpl-http-{uuid.uuid4()}",
             "object": "chat.completion",
             "created": int(time.time()),
             "model": request.model,
@@ -247,7 +247,7 @@ async def chat_completions(request: ChatRequest):
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": f"❌ Eroare la procesarea cererii: {str(e)}\n\nVerifică logs pentru mai multe detalii."
+                        "content": f"❌ Eroare la procesarea cererii HTTP: {str(e)}\n\nVerifică logs pentru mai multe detalii."
                     },
                     "finish_reason": "stop"
                 }
@@ -261,33 +261,29 @@ async def chat_completions(request: ChatRequest):
         
         return error_response
 
-async def stream_chat_response(request: ChatRequest, adapter: OpenWebUIAdapter):
+async def stream_chat_response_http(request: ChatRequest, adapter: OpenWebUIHTTPAdapter):
     """
-    Generator pentru streaming response - compatibil cu OpenWebUI
+    Generator pentru streaming response HTTP - compatibil cu OpenWebUI
     """
     try:
-        logger.info("🌊 Încep streaming response...")
+        logger.info("🌊 Încep streaming HTTP response...")
         
-        # Log mesajele pentru debugging
-        for i, msg in enumerate(request.messages):
-            logger.info(f"  Mesaj {i}: {msg.role} - {msg.content[:50]}...")
-        
-        # Procesează chat-ul
+        # Procesează chat-ul prin HTTP
         start_time = time.time()
         response_content = await adapter.process_chat_async(request.messages)
         process_time = time.time() - start_time
         
-        logger.info(f"⏱️ Procesarea streaming a durat {process_time:.2f}s")
+        logger.info(f"⏱️ Procesarea streaming HTTP a durat {process_time:.2f}s")
         
         # Validare răspuns
         if not response_content or not response_content.strip():
-            logger.error("❌ Răspuns gol pentru streaming")
-            response_content = "❌ Nu am putut genera un răspuns. Verifică logs pentru detalii."
+            logger.error("❌ Răspuns gol pentru streaming HTTP")
+            response_content = "❌ Nu am putut genera un răspuns HTTP. Verifică logs pentru detalii."
         
-        logger.info(f"🌊 Streaming răspuns de {len(response_content)} caractere")
+        logger.info(f"🌊 Streaming HTTP răspuns de {len(response_content)} caractere")
         
-        # ID-ul răspunsului
-        chat_id = f"chatcmpl-{uuid.uuid4()}"
+        # ID-ul răspunsului HTTP
+        chat_id = f"chatcmpl-http-{uuid.uuid4()}"
         created_time = int(time.time())
         
         # Trimite răspunsul ca stream de bucăți
@@ -318,7 +314,7 @@ async def stream_chat_response(request: ChatRequest, adapter: OpenWebUIAdapter):
             # Mică pauză pentru efect de streaming natural
             await asyncio.sleep(0.01)
         
-        # Trimite chunk-ul final
+        # Trimite chunk-ul final HTTP
         final_chunk = {
             "id": chat_id,
             "object": "chat.completion.chunk",
@@ -336,14 +332,14 @@ async def stream_chat_response(request: ChatRequest, adapter: OpenWebUIAdapter):
         yield f"data: {json.dumps(final_chunk)}\n\n"
         yield "data: [DONE]\n\n"
         
-        logger.info("✅ Streaming complet")
+        logger.info("✅ Streaming HTTP complet")
         
     except Exception as e:
-        logger.error(f"❌ Eroare în streaming: {e}", exc_info=True)
+        logger.error(f"❌ Eroare în streaming HTTP: {e}", exc_info=True)
         
-        # Chunk de eroare
+        # Chunk de eroare HTTP
         error_chunk = {
-            "id": f"chatcmpl-{uuid.uuid4()}",
+            "id": f"chatcmpl-http-{uuid.uuid4()}",
             "object": "chat.completion.chunk",
             "created": int(time.time()),
             "model": request.model,
@@ -351,7 +347,7 @@ async def stream_chat_response(request: ChatRequest, adapter: OpenWebUIAdapter):
                 {
                     "index": 0,
                     "delta": {
-                        "content": f"❌ Eroare streaming: {str(e)}"
+                        "content": f"❌ Eroare streaming HTTP: {str(e)}"
                     },
                     "finish_reason": "stop"
                 }
@@ -361,78 +357,78 @@ async def stream_chat_response(request: ChatRequest, adapter: OpenWebUIAdapter):
         yield f"data: {json.dumps(error_chunk)}\n\n"
         yield "data: [DONE]\n\n"
 
-# Endpoint-urile de management rămân la fel
+# Endpoint-urile de management pentru HTTP
 @app.get("/v1/mcp/status")
 async def mcp_status():
-    """Status al conexiunii MCP"""
+    """Status al conexiunii MCP HTTP"""
     global openwebui_adapter
     
     if not openwebui_adapter:
-        raise HTTPException(status_code=503, detail="Adapter nu este inițializat")
+        raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
     return await openwebui_adapter.get_mcp_status()
 
 @app.get("/v1/mcp/tools")
 async def list_mcp_tools():
-    """Lista tool-urilor MCP disponibile"""
+    """Lista tool-urilor MCP HTTP disponibile"""
     global openwebui_adapter
     
     if not openwebui_adapter:
-        raise HTTPException(status_code=503, detail="Adapter nu este inițializat")
+        raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
     tools = await openwebui_adapter.get_available_tools()
-    return {"tools": tools, "count": len(tools)}
+    return {"tools": tools, "count": len(tools), "connection_type": "HTTP"}
 
 @app.post("/v1/mcp/restart")
 async def restart_mcp_client():
-    """Restart clientul LLM cu MCP"""
+    """Restart clientul LLM HTTP cu MCP"""
     global openwebui_adapter
     
     if not openwebui_adapter:
-        raise HTTPException(status_code=503, detail="Adapter nu este inițializat")
+        raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
     try:
-        logger.info("🔄 Restart client LLM...")
+        logger.info("🔄 Restart client LLM HTTP...")
         
-        # Forțează recrearea clientului
-        with openwebui_adapter.client_lock:
+        # Forțează recrearea clientului HTTP
+        async with openwebui_adapter.client_lock:
             if openwebui_adapter.llm_client:
-                openwebui_adapter.llm_client.stop_mcp_server()
+                await openwebui_adapter.llm_client.cleanup_http()
             openwebui_adapter.llm_client = None
             openwebui_adapter.last_activity = 0  # Forțează recrearea
             openwebui_adapter.is_healthy = False
         
-        # Testează noul client
-        openwebui_adapter._test_configuration()
+        # Testează noul client HTTP
+        await openwebui_adapter._test_configuration_async()
         status = await openwebui_adapter.get_mcp_status()
         
         if status.get("connected"):
-            return {"success": True, "message": "Client LLM restartat cu succes", "status": status}
+            return {"success": True, "message": "Client LLM HTTP restartat cu succes", "status": status}
         else:
-            return {"success": False, "message": "Restart parțial - verifică conexiunea MCP", "status": status}
+            return {"success": False, "message": "Restart HTTP parțial - verifică conexiunea MCP", "status": status}
             
     except Exception as e:
-        logger.error(f"❌ Eroare restart: {e}")
-        raise HTTPException(status_code=500, detail=f"Eroare restart: {str(e)}")
+        logger.error(f"❌ Eroare restart HTTP: {e}")
+        raise HTTPException(status_code=500, detail=f"Eroare restart HTTP: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
     import signal
     
     def signal_handler(signum, frame):
-        """Handler pentru semnale de sistem"""
-        logger.info(f"🛑 Primit semnal {signum} - opresc adapter-ul...")
+        """Handler pentru semnale de sistem HTTP"""
+        logger.info(f"🛑 Primit semnal {signum} - opresc HTTP adapter-ul...")
         if openwebui_adapter:
-            openwebui_adapter.cleanup()
+            asyncio.run(openwebui_adapter.cleanup())
         sys.exit(0)
     
     # Înregistrează handlere pentru semnale
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    logger.info("🚀 Pornesc OpenWebUI Adapter corrigat...")
+    logger.info("🚀 Pornesc OpenWebUI HTTP Adapter...")
     
-    # Pornește serverul
+    # Pornește serverul HTTP
     uvicorn.run(
         app, 
         host="0.0.0.0", 

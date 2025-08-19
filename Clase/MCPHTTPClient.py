@@ -9,7 +9,7 @@ import time
 import uuid
 import threading
 import queue
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 import httpx
 import asyncio
 import logging
@@ -261,7 +261,9 @@ class MCPHTTPClient:
             return {"error": str(e)}
         
     async def analyze_intent_and_call_tools_async(self, user_input: str) -> str:
-        """Analizează intenția și apelează tool-urile - versiune async"""
+        """
+        Analizează intenția și apelează tool-urile
+        """
         if not self.mcp_connected or not self.mcp_tools:
             return "ℹ️ Nu sunt conectat la serverul MCP HTTP sau nu sunt tool-uri disponibile."
         
@@ -278,36 +280,49 @@ class MCPHTTPClient:
         
         analysis_prompt = f"""Analizează următoarea cerere și determină ce tool MCP să apelez și cu ce parametri.
 
-Tool-uri MCP disponibile:
-{tools_description}
+    Tool-uri MCP disponibile:
+    {tools_description}
 
-Cererea utilizatorului: {user_input}
+    Cererea utilizatorului: {user_input}
 
-Răspunde în format JSON strict:
-{{
-    "action": "call_tool",
-    "tool_name": "numele_tool_ului",
-    "arguments": {{"param1": "valoare1"}},
-    "explanation": "explicația acțiunii"
-}}
+    Răspunde în format JSON strict:
+    {{
+        "action": "call_tool",
+        "tool_name": "numele_tool_ului",
+        "arguments": {{"param1": "valoare1"}},
+        "explanation": "explicația acțiunii"
+    }}
 
-Sau dacă nu este necesar un tool:
-{{
-    "action": "no_tool",
-    "explanation": "nu este necesar un tool MCP"
-}}
+    Sau dacă nu este necesar un tool:
+    {{
+        "action": "no_tool",
+        "explanation": "nu este necesar un tool MCP"
+    }}
 
-IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
+    IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
 
-        # SOLUȚIA: Fă apelul LLM în mod sincron, nu cu await
-        analysis_response = self.query_llm_with_retry(analysis_prompt, max_tokens=300)
+        # Fă apelul LLM în mod sincron
+        try:
+            analysis_response = self.query_llm_with_retry(analysis_prompt, max_tokens=300)
+        except Exception as e:
+            return f"❌ Eroare la analiza LLM: {str(e)}"
         
         try:
-            # Parsează JSON-ul
+            # Curăță răspunsul și încearcă să parseze JSON-ul
+            cleaned_response = analysis_response.strip()
+            
+            # Elimină markdown code blocks dacă există
+            if cleaned_response.startswith('```'):
+                lines = cleaned_response.split('\n')
+                cleaned_response = '\n'.join(lines[1:-1])
+            
+            # Găsește JSON-ul în răspuns
             import re
-            json_match = re.search(r'\{.*\}', analysis_response, re.DOTALL)
+            json_match = re.search(r'\{.*\}', cleaned_response, re.DOTALL)
             if json_match:
-                analysis = json.loads(json_match.group())
+                json_str = json_match.group()
+                print(f"🔍 JSON detectat: {json_str}")
+                analysis = json.loads(json_str)
                 
                 if analysis.get('action') == 'call_tool':
                     tool_name = analysis.get('tool_name')
@@ -319,12 +334,20 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
                         # Apelează tool-ul MCP prin HTTP
                         tool_result = await self.call_mcp_tool_http(tool_name, arguments)
                         
-                        # Procesează rezultatul
+                        # FIX: Verifică tipul răspunsului ÎNAINTE de a apela .get()
+                        if isinstance(tool_result, str):
+                            # Dacă tool_result este string, înseamnă că e un mesaj de eroare
+                            return f"❌ Eroare la executarea {tool_name}: {tool_result}"
+                        
                         if isinstance(tool_result, dict):
+                            # Verifică dacă există eroare în dict
                             if tool_result.get('error'):
-                                return f"❌ Eroare la executarea {tool_name}: {tool_result['error']}"
+                                error_msg = tool_result.get('error', 'Eroare necunoscută')
+                                return f"❌ Eroare la executarea {tool_name}: {error_msg}"
                             
+                            # Procesează rezultatul cu succes
                             if 'content' in tool_result:
+                                # Rezultat cu conținut structurat
                                 content_items = tool_result['content']
                                 result_text = ""
                                 for item in content_items:
@@ -334,15 +357,22 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
                                         result_text += item
                                 return f"🔧 Rezultat {tool_name}:\n{result_text}"
                             else:
+                                # Rezultat simplu
                                 result_str = json.dumps(tool_result, indent=2, ensure_ascii=False)
                                 return f"🔧 Rezultat {tool_name}:\n{result_str}"
                         
+                        # Fallback pentru alte tipuri
                         return f"🔧 Rezultat {tool_name}:\n{str(tool_result)}"
+                        
                     else:
                         return f"❌ Tool-ul '{tool_name}' nu este disponibil"
                 else:
                     return "ℹ️ Cererea nu necesită apelarea unui tool MCP specific."
                     
+        except json.JSONDecodeError as e:
+            print(f"⚠️ Nu pot parsa JSON din răspunsul LLM: {e}")
+            print(f"📄 Răspuns raw: {analysis_response}")
+            return "❌ Nu pot interpreta analiza pentru tool-urile MCP."
         except Exception as e:
             print(f"⚠️ Eroare în analiză: {e}")
             return f"❌ Eroare în procesarea cererii pentru tool-urile MCP HTTP: {str(e)}"
@@ -379,7 +409,9 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
         raise Exception(f"Provider necunoscut: {self.provider}")
 
     def create_enhanced_prompt(self, user_input: str, tool_results: str = "") -> str:
-        """Creează prompt îmbunătățit cu rezultate de la tool-uri MCP"""
+        """
+        Creează prompt îmbunătățit cu rezultate de la tool-uri MCP - ACCEPTĂ DOAR STRING
+        """
         context_str = ""
         if self.session_context:
             recent_context = self.session_context[-2:]
@@ -393,26 +425,35 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
 
         connection_info = f"Conexiune MCP: {'✅ Conectat via HTTP' if self.mcp_connected else '❌ Deconectat'}"
 
+        # Procesează rezultatele tool-urilor - DOAR STRING
+        tool_results_str = ""
+        if tool_results and isinstance(tool_results, str) and tool_results.strip():
+            # Verifică dacă rezultatul pare să fie de la un tool sau este mesaj informativ
+            if any(marker in tool_results for marker in ["🔧 Rezultat", "❌ Eroare", "ℹ️", "⚠️"]):
+                tool_results_str = f"\n{tool_results}\n"
+            else:
+                tool_results_str = f"\nRezultat MCP:\n{tool_results}\n"
+
         system_prompt = f"""Ești un asistent AI expert în Alfresco Document Management System cu acces la tool-uri MCP prin HTTP.
 
-{connection_info}
-Model: {self.provider.upper()} - {self.model}
-Server MCP: {self.mcp_server_url}
-{tools_info}
+    {connection_info}
+    Model: {self.provider.upper()} - {self.model}
+    Server MCP: {self.mcp_server_url}
+    {tools_info}
 
-{context_str}
+    {context_str}
 
-{tool_results}
+    {tool_results_str}
 
-Întrebarea curentă: {user_input}
+    Întrebarea curentă: {user_input}
 
-Instrucțiuni:
-- Dacă ai rezultate de la tool-uri MCP, folosește-le în răspuns
-- Răspunde concis și profesional
-- Explică ce operațiuni au fost efectuate
-- Nu repeta contextul inutil
+    Instrucțiuni:
+    - Dacă ai rezultate de la tool-uri MCP, folosește-le în răspuns
+    - Răspunde concis și profesional
+    - Explică ce operațiuni au fost efectuate
+    - Nu repeta contextul inutil
 
-Răspuns:"""
+    Răspuns:"""
 
         return system_prompt
 
@@ -453,7 +494,7 @@ Răspuns:"""
             print(f"🤖 {self.provider.title()} (procesez cu MCP HTTP...)")
             start_time = time.time()
             
-            # Analizează și apelează tool-uri MCP
+            # Analizează și apelează tool-uri MCP - acum returnează un dict
             tool_results = await self.analyze_intent_and_call_tools_async(user_input)
             
             # Creează prompt îmbunătățit
@@ -465,8 +506,11 @@ Răspuns:"""
             processing_time = time.time() - start_time
             print(f"🤖 {self.provider.title()} ({processing_time:.1f}s):")
             
-            if tool_results and not any(msg in tool_results for msg in ["Nu pot interpreta", "Nu sunt conectat", "nu necesită"]):
-                print(f"   {tool_results}")
+            # Afișează rezultatele tool-urilor dacă există
+            if tool_results and tool_results.get('success') and tool_results.get('tool_used'):
+                print(f"   🔧 Tool executat: {tool_results['tool_used']}")
+                if tool_results.get('tool_result'):
+                    print(f"   📋 Rezultat: {tool_results['tool_result'][:200]}...")
             
             print(f"   {response}")
             
@@ -485,7 +529,7 @@ Răspuns:"""
             print(f"❌ Eroare procesare input: {e}")
         
     async def interactive_session_http_async(self):
-        """Sesiune interactivă ASYNC cu server MCP prin HTTP - SOLUȚIA CORECTATĂ"""
+        """Sesiune interactivă ASYNC cu server MCP prin HTTP"""
         print(f"🤖 Client LLM pentru MCP Alfresco prin HTTP")
         print(f"⚡ Provider: {self.provider.upper()}")
         print(f"🧠 Model: {self.model}")

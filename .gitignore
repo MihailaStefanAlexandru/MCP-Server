@@ -2,3 +2,4 @@ venv/
 out.txt
 acs-community-deployment
 llm_config.json
+openwebui.json
