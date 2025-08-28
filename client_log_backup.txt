@@ -1,0 +1,401 @@
+2025-08-21 13:20:25 - DEBUG - ➡️ REQUEST: GET http://localhost:8002/health
+2025-08-21 13:20:25 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:20:25 - DEBUG - Body: {"status":"healthy","initialized":false,"alfresco_url":"http://localhost:8080","timestamp":"2025-08-21T13:20:25.546199"}
+2025-08-21 13:20:33 - DEBUG - ➡️ REQUEST: GET http://localhost:8002/health
+2025-08-21 13:20:33 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:20:33 - DEBUG - Body: {"status":"healthy","initialized":true,"alfresco_url":"http://localhost:8080","timestamp":"2025-08-21T13:20:33.902450"}
+2025-08-21 13:21:03 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_id_by_name
+2025-08-21 13:21:03 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "89060aeb-434d-4560-bcc7-cb0591671272",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_id_by_name",
+    "arguments": {
+      "name": "Sites"
+    }
+  }
+}
+2025-08-21 13:21:03 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:21:03 - DEBUG - Body: {"jsonrpc":"2.0","id":"89060aeb-434d-4560-bcc7-cb0591671272","result":{"content":[{"type":"text","text":"{'id': 'e2b82976-8207-4959-ab69-123f5a575a97', 'name': 'Sites', 'type': 'folder', 'message': \"Nodul 'Sites' are ID-ul: e2b82976-8207-4959-ab69-123f5a575a97 (tip: folder)\"}"}]},"error":null}
+2025-08-21 13:21:03 - INFO - ✅ Tool HTTP get_node_id_by_name executat cu succes
+2025-08-21 13:21:03 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '89060aeb-434d-4560-bcc7-cb0591671272', 'result': {'content': [{'type': 'text', 'text': '{\'id\': \'e2b82976-8207-4959-ab69-123f5a575a97\', \'name\': \'Sites\', \'type\': \'folder\', \'message\': "Nodul \'Sites\' are ID-ul: e2b82976-8207-4959-ab69-123f5a575a97 (tip: folder)"}'}]}, 'error': None}
+2025-08-21 13:22:31 - DEBUG - 🔧 Apelez tool MCP HTTP: list_root_children
+2025-08-21 13:22:31 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "2dfd977a-21ee-4f88-a020-84a991bcbd12",
+  "method": "tools/call",
+  "params": {
+    "name": "list_root_children",
+    "arguments": {
+      "maxItems": 100
+    }
+  }
+}
+2025-08-21 13:22:31 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:22:31 - DEBUG - Body: {"jsonrpc":"2.0","id":"2dfd977a-21ee-4f88-a020-84a991bcbd12","result":{"content":[{"type":"text","text":"{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:20:35.730+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-9267-c4
+2025-08-21 13:22:31 - INFO - ✅ Tool HTTP list_root_children executat cu succes
+2025-08-21 13:22:31 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '2dfd977a-21ee-4f88-a020-84a991bcbd12', 'result': {'content': [{'type': 'text', 'text': "{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:20:35.730+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-9267-c45f2109a2f5', 'name': 'IMAP Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.421+0000', 'modified': '2025-08-21T10:20:24.421+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '5551c437-66d6-40a2-aca2-e42f1d9ea6c1', 'name': 'Shared', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.382+0000', 'modified': '2025-08-21T10:20:24.382+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': 'e2b82976-8207-4959-ab69-123f5a575a97', 'name': 'Sites', 'type': 'folder', 'nodeType': 'st:sites', 'created': '2025-08-21T10:20:27.543+0000', 'modified': '2025-08-21T10:20:34.039+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '45adbe7e-957d-4cf8-a7f3-2e1cf571da34', 'name': 'User Homes', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.372+0000', 'modified': '2025-08-21T10:20:24.372+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}], 'total': 7, 'message': 'Am găsit 7 elemente în nodul -root-'}"}]}, 'error': None}
+2025-08-21 13:23:03 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_id_by_name
+2025-08-21 13:23:03 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "cc1a5177-97ad-40c2-9de2-abf81264ebd6",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_id_by_name",
+    "arguments": {
+      "name": "IMAP Home"
+    }
+  }
+}
+2025-08-21 13:23:03 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:23:03 - DEBUG - Body: {"jsonrpc":"2.0","id":"cc1a5177-97ad-40c2-9de2-abf81264ebd6","result":{"content":[{"type":"text","text":"{'id': '406a1014-a495-498c-9267-c45f2109a2f5', 'name': 'IMAP Home', 'type': 'folder', 'message': \"Nodul 'IMAP Home' are ID-ul: 406a1014-a495-498c-9267-c45f2109a2f5 (tip: folder)\"}"}]},"error":null}
+2025-08-21 13:23:03 - INFO - ✅ Tool HTTP get_node_id_by_name executat cu succes
+2025-08-21 13:23:03 - DEBUG - Result: {'jsonrpc': '2.0', 'id': 'cc1a5177-97ad-40c2-9de2-abf81264ebd6', 'result': {'content': [{'type': 'text', 'text': '{\'id\': \'406a1014-a495-498c-9267-c45f2109a2f5\', \'name\': \'IMAP Home\', \'type\': \'folder\', \'message\': "Nodul \'IMAP Home\' are ID-ul: 406a1014-a495-498c-9267-c45f2109a2f5 (tip: folder)"}'}]}, 'error': None}
+2025-08-21 13:24:20 - DEBUG - 🔧 Apelez tool MCP HTTP: create_folder
+2025-08-21 13:24:20 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "b55aaa33-caba-410f-80f8-1e0b4a34dc88",
+  "method": "tools/call",
+  "params": {
+    "name": "create_folder",
+    "arguments": {
+      "name": "Test",
+      "parent_id": "alfresco_root",
+      "title": "Test",
+      "description": "Fisier de tip text",
+      "node_id": 1234
+    }
+  }
+}
+2025-08-21 13:24:20 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:24:20 - DEBUG - Body: {"jsonrpc":"2.0","id":"b55aaa33-caba-410f-80f8-1e0b4a34dc88","result":null,"error":{"code":-32603,"message":"Internal error","data":"500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/alfresco_root/children'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}}
+2025-08-21 13:24:20 - WARNING - ⚠️ Tool create_folder a returnat eroare: {'code': -32603, 'message': 'Internal error', 'data': "500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/alfresco_root/children'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}
+2025-08-21 13:25:35 - DEBUG - 🔧 Apelez tool MCP HTTP: create_folder
+2025-08-21 13:25:35 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "e90416d2-7ae3-4425-bed1-abf38e4bfc58",
+  "method": "tools/call",
+  "params": {
+    "name": "create_folder",
+    "arguments": {
+      "name": "1234.txt",
+      "parent_id": "Company Home",
+      "title": "1234.txt",
+      "description": "Fisier de tip text cu ID-ul 1234"
+    }
+  }
+}
+2025-08-21 13:25:35 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:25:35 - DEBUG - Body: {"jsonrpc":"2.0","id":"e90416d2-7ae3-4425-bed1-abf38e4bfc58","result":null,"error":{"code":-32603,"message":"Internal error","data":"500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/Company%20Home/children'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}}
+2025-08-21 13:25:35 - WARNING - ⚠️ Tool create_folder a returnat eroare: {'code': -32603, 'message': 'Internal error', 'data': "500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/Company%20Home/children'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}
+2025-08-21 13:26:55 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:26:55 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "631acf8d-9933-43b4-b544-bba1de38952a",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": "root"
+    }
+  }
+}
+2025-08-21 13:26:55 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:26:55 - DEBUG - Body: {"jsonrpc":"2.0","id":"631acf8d-9933-43b4-b544-bba1de38952a","result":null,"error":{"code":-32603,"message":"Internal error","data":"500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/root?include=properties%2CaspectNames%2Cpath%2Cpermissions%2CallowableOperations'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}}
+2025-08-21 13:26:55 - WARNING - ⚠️ Tool get_node_info a returnat eroare: {'code': -32603, 'message': 'Internal error', 'data': "500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/root?include=properties%2CaspectNames%2Cpath%2Cpermissions%2CallowableOperations'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}
+2025-08-21 13:29:17 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_id_by_name
+2025-08-21 13:29:17 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "6ba8e7c0-2e84-4969-8060-bfd371bd3724",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_id_by_name",
+    "arguments": {
+      "name": "Data Dictionary"
+    }
+  }
+}
+2025-08-21 13:29:17 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:29:17 - DEBUG - Body: {"jsonrpc":"2.0","id":"6ba8e7c0-2e84-4969-8060-bfd371bd3724","result":{"content":[{"type":"text","text":"{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'message': \"Nodul 'Data Dictionary' are ID-ul: 2caa36d4-4a61-48b7-b2ea-2b802e313b2d (tip: folder)\"}"}]},"error":null}
+2025-08-21 13:29:17 - INFO - ✅ Tool HTTP get_node_id_by_name executat cu succes
+2025-08-21 13:29:17 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '6ba8e7c0-2e84-4969-8060-bfd371bd3724', 'result': {'content': [{'type': 'text', 'text': '{\'id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'name\': \'Data Dictionary\', \'type\': \'folder\', \'message\': "Nodul \'Data Dictionary\' are ID-ul: 2caa36d4-4a61-48b7-b2ea-2b802e313b2d (tip: folder)"}'}]}, 'error': None}
+2025-08-21 13:30:18 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:30:18 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "348845f5-764f-40d4-ba86-213d591044bc",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d"
+    }
+  }
+}
+2025-08-21 13:30:18 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:30:18 - DEBUG - Body: {"jsonrpc":"2.0","id":"348845f5-764f-40d4-ba86-213d591044bc","result":{"content":[{"type":"text","text":"{'node': {'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:20:35.730+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'parentId': '22829595-859a-4cdb-8c6b-cdadd51d3a2b', 'path': '/Company Home', 'isRoot': False, 'properties': {'title': 'Data Dictionary', 'description': 'User managed definitions'}}, 'message': \"Informații pentru nodul 'Data Dictionary'\", 'items': [{'label': 'ID', 'value': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d'}, {'label': 'Tip', 'value': 'folder'}, {'label': 'Tip nod', 'value': 'cm:folder'}, {'label': 'Creat la', 'value': '2025-08-21T10:20:24.038+0000'}, {'label': 'Modificat la', 'value': '2025-08-21T10:20:35.730+0000'}, {'label': 'Creat de', 'value': 'System'}, {'label': 'Modificat de', 'value': 'System'}, {'label': 'ID Pări
+2025-08-21 13:30:18 - INFO - ✅ Tool HTTP get_node_info executat cu succes
+2025-08-21 13:30:18 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '348845f5-764f-40d4-ba86-213d591044bc', 'result': {'content': [{'type': 'text', 'text': '{\'node\': {\'id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'name\': \'Data Dictionary\', \'type\': \'folder\', \'nodeType\': \'cm:folder\', \'created\': \'2025-08-21T10:20:24.038+0000\', \'modified\': \'2025-08-21T10:20:35.730+0000\', \'createdBy\': \'System\', \'modifiedBy\': \'System\', \'parentId\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\', \'path\': \'/Company Home\', \'isRoot\': False, \'properties\': {\'title\': \'Data Dictionary\', \'description\': \'User managed definitions\'}}, \'message\': "Informații pentru nodul \'Data Dictionary\'", \'items\': [{\'label\': \'ID\', \'value\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\'}, {\'label\': \'Tip\', \'value\': \'folder\'}, {\'label\': \'Tip nod\', \'value\': \'cm:folder\'}, {\'label\': \'Creat la\', \'value\': \'2025-08-21T10:20:24.038+0000\'}, {\'label\': \'Modificat la\', \'value\': \'2025-08-21T10:20:35.730+0000\'}, {\'label\': \'Creat de\', \'value\': \'System\'}, {\'label\': \'Modificat de\', \'value\': \'System\'}, {\'label\': \'ID Părinte\', \'value\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\'}]}'}]}, 'error': None}
+2025-08-21 13:31:13 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:31:13 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "ff04a510-51fa-4ef2-a6dd-a0bf6c42c75d",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d"
+    }
+  }
+}
+2025-08-21 13:31:13 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:31:13 - DEBUG - Body: {"jsonrpc":"2.0","id":"ff04a510-51fa-4ef2-a6dd-a0bf6c42c75d","result":{"content":[{"type":"text","text":"{'node': {'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:20:35.730+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'parentId': '22829595-859a-4cdb-8c6b-cdadd51d3a2b', 'path': '/Company Home', 'isRoot': False, 'properties': {'title': 'Data Dictionary', 'description': 'User managed definitions'}}, 'message': \"Informații pentru nodul 'Data Dictionary'\", 'items': [{'label': 'ID', 'value': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d'}, {'label': 'Tip', 'value': 'folder'}, {'label': 'Tip nod', 'value': 'cm:folder'}, {'label': 'Creat la', 'value': '2025-08-21T10:20:24.038+0000'}, {'label': 'Modificat la', 'value': '2025-08-21T10:20:35.730+0000'}, {'label': 'Creat de', 'value': 'System'}, {'label': 'Modificat de', 'value': 'System'}, {'label': 'ID Pări
+2025-08-21 13:31:13 - INFO - ✅ Tool HTTP get_node_info executat cu succes
+2025-08-21 13:31:13 - DEBUG - Result: {'jsonrpc': '2.0', 'id': 'ff04a510-51fa-4ef2-a6dd-a0bf6c42c75d', 'result': {'content': [{'type': 'text', 'text': '{\'node\': {\'id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'name\': \'Data Dictionary\', \'type\': \'folder\', \'nodeType\': \'cm:folder\', \'created\': \'2025-08-21T10:20:24.038+0000\', \'modified\': \'2025-08-21T10:20:35.730+0000\', \'createdBy\': \'System\', \'modifiedBy\': \'System\', \'parentId\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\', \'path\': \'/Company Home\', \'isRoot\': False, \'properties\': {\'title\': \'Data Dictionary\', \'description\': \'User managed definitions\'}}, \'message\': "Informații pentru nodul \'Data Dictionary\'", \'items\': [{\'label\': \'ID\', \'value\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\'}, {\'label\': \'Tip\', \'value\': \'folder\'}, {\'label\': \'Tip nod\', \'value\': \'cm:folder\'}, {\'label\': \'Creat la\', \'value\': \'2025-08-21T10:20:24.038+0000\'}, {\'label\': \'Modificat la\', \'value\': \'2025-08-21T10:20:35.730+0000\'}, {\'label\': \'Creat de\', \'value\': \'System\'}, {\'label\': \'Modificat de\', \'value\': \'System\'}, {\'label\': \'ID Părinte\', \'value\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\'}]}'}]}, 'error': None}
+2025-08-21 13:31:30 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:31:30 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "63e8cdf4-4460-4e33-bd89-7353d44b5c31",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d"
+    }
+  }
+}
+2025-08-21 13:31:30 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:31:30 - DEBUG - Body: {"jsonrpc":"2.0","id":"63e8cdf4-4460-4e33-bd89-7353d44b5c31","result":{"content":[{"type":"text","text":"{'node': {'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:20:35.730+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'parentId': '22829595-859a-4cdb-8c6b-cdadd51d3a2b', 'path': '/Company Home', 'isRoot': False, 'properties': {'title': 'Data Dictionary', 'description': 'User managed definitions'}}, 'message': \"Informații pentru nodul 'Data Dictionary'\", 'items': [{'label': 'ID', 'value': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d'}, {'label': 'Tip', 'value': 'folder'}, {'label': 'Tip nod', 'value': 'cm:folder'}, {'label': 'Creat la', 'value': '2025-08-21T10:20:24.038+0000'}, {'label': 'Modificat la', 'value': '2025-08-21T10:20:35.730+0000'}, {'label': 'Creat de', 'value': 'System'}, {'label': 'Modificat de', 'value': 'System'}, {'label': 'ID Pări
+2025-08-21 13:31:30 - INFO - ✅ Tool HTTP get_node_info executat cu succes
+2025-08-21 13:31:30 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '63e8cdf4-4460-4e33-bd89-7353d44b5c31', 'result': {'content': [{'type': 'text', 'text': '{\'node\': {\'id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'name\': \'Data Dictionary\', \'type\': \'folder\', \'nodeType\': \'cm:folder\', \'created\': \'2025-08-21T10:20:24.038+0000\', \'modified\': \'2025-08-21T10:20:35.730+0000\', \'createdBy\': \'System\', \'modifiedBy\': \'System\', \'parentId\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\', \'path\': \'/Company Home\', \'isRoot\': False, \'properties\': {\'title\': \'Data Dictionary\', \'description\': \'User managed definitions\'}}, \'message\': "Informații pentru nodul \'Data Dictionary\'", \'items\': [{\'label\': \'ID\', \'value\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\'}, {\'label\': \'Tip\', \'value\': \'folder\'}, {\'label\': \'Tip nod\', \'value\': \'cm:folder\'}, {\'label\': \'Creat la\', \'value\': \'2025-08-21T10:20:24.038+0000\'}, {\'label\': \'Modificat la\', \'value\': \'2025-08-21T10:20:35.730+0000\'}, {\'label\': \'Creat de\', \'value\': \'System\'}, {\'label\': \'Modificat de\', \'value\': \'System\'}, {\'label\': \'ID Părinte\', \'value\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\'}]}'}]}, 'error': None}
+2025-08-21 13:32:02 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:32:02 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "9d5e7d68-4436-4533-86bd-230623d5dfed",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d"
+    }
+  }
+}
+2025-08-21 13:32:02 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:32:02 - DEBUG - Body: {"jsonrpc":"2.0","id":"9d5e7d68-4436-4533-86bd-230623d5dfed","result":{"content":[{"type":"text","text":"{'node': {'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:20:35.730+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'parentId': '22829595-859a-4cdb-8c6b-cdadd51d3a2b', 'path': '/Company Home', 'isRoot': False, 'properties': {'title': 'Data Dictionary', 'description': 'User managed definitions'}}, 'message': \"Informații pentru nodul 'Data Dictionary'\", 'items': [{'label': 'ID', 'value': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d'}, {'label': 'Tip', 'value': 'folder'}, {'label': 'Tip nod', 'value': 'cm:folder'}, {'label': 'Creat la', 'value': '2025-08-21T10:20:24.038+0000'}, {'label': 'Modificat la', 'value': '2025-08-21T10:20:35.730+0000'}, {'label': 'Creat de', 'value': 'System'}, {'label': 'Modificat de', 'value': 'System'}, {'label': 'ID Pări
+2025-08-21 13:32:02 - INFO - ✅ Tool HTTP get_node_info executat cu succes
+2025-08-21 13:32:02 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '9d5e7d68-4436-4533-86bd-230623d5dfed', 'result': {'content': [{'type': 'text', 'text': '{\'node\': {\'id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'name\': \'Data Dictionary\', \'type\': \'folder\', \'nodeType\': \'cm:folder\', \'created\': \'2025-08-21T10:20:24.038+0000\', \'modified\': \'2025-08-21T10:20:35.730+0000\', \'createdBy\': \'System\', \'modifiedBy\': \'System\', \'parentId\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\', \'path\': \'/Company Home\', \'isRoot\': False, \'properties\': {\'title\': \'Data Dictionary\', \'description\': \'User managed definitions\'}}, \'message\': "Informații pentru nodul \'Data Dictionary\'", \'items\': [{\'label\': \'ID\', \'value\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\'}, {\'label\': \'Tip\', \'value\': \'folder\'}, {\'label\': \'Tip nod\', \'value\': \'cm:folder\'}, {\'label\': \'Creat la\', \'value\': \'2025-08-21T10:20:24.038+0000\'}, {\'label\': \'Modificat la\', \'value\': \'2025-08-21T10:20:35.730+0000\'}, {\'label\': \'Creat de\', \'value\': \'System\'}, {\'label\': \'Modificat de\', \'value\': \'System\'}, {\'label\': \'ID Părinte\', \'value\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\'}]}'}]}, 'error': None}
+2025-08-21 13:34:13 - DEBUG - 🔧 Apelez tool MCP HTTP: create_folder
+2025-08-21 13:34:13 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "8037b921-a63d-483a-8af2-d220c6cd02cb",
+  "method": "tools/call",
+  "params": {
+    "name": "create_folder",
+    "arguments": {
+      "name": "numele_fisierului",
+      "parent_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d",
+      "title": "numele_fisierului",
+      "description": "fisier de tip text"
+    }
+  }
+}
+2025-08-21 13:34:13 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:34:13 - DEBUG - Body: {"jsonrpc":"2.0","id":"8037b921-a63d-483a-8af2-d220c6cd02cb","result":{"content":[{"type":"text","text":"{'created': True, 'folder_id': 'cd7358f8-37d2-45b8-9cfe-a48d449b15e7', 'folder_name': 'numele_fisierului', 'parent_id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'message': \"Folderul 'numele_fisierului' a fost creat cu succes\"}"}]},"error":null}
+2025-08-21 13:34:13 - INFO - ✅ Tool HTTP create_folder executat cu succes
+2025-08-21 13:34:13 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '8037b921-a63d-483a-8af2-d220c6cd02cb', 'result': {'content': [{'type': 'text', 'text': '{\'created\': True, \'folder_id\': \'cd7358f8-37d2-45b8-9cfe-a48d449b15e7\', \'folder_name\': \'numele_fisierului\', \'parent_id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'message\': "Folderul \'numele_fisierului\' a fost creat cu succes"}'}]}, 'error': None}
+2025-08-21 13:37:05 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:37:05 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "98c7dd03-7673-4fc2-8248-a9d66b763b5b",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d"
+    }
+  }
+}
+2025-08-21 13:37:05 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:37:05 - DEBUG - Body: {"jsonrpc":"2.0","id":"98c7dd03-7673-4fc2-8248-a9d66b763b5b","result":{"content":[{"type":"text","text":"{'node': {'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'parentId': '22829595-859a-4cdb-8c6b-cdadd51d3a2b', 'path': '/Company Home', 'isRoot': False, 'properties': {'title': 'Data Dictionary', 'description': 'User managed definitions'}}, 'message': \"Informații pentru nodul 'Data Dictionary'\", 'items': [{'label': 'ID', 'value': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d'}, {'label': 'Tip', 'value': 'folder'}, {'label': 'Tip nod', 'value': 'cm:folder'}, {'label': 'Creat la', 'value': '2025-08-21T10:20:24.038+0000'}, {'label': 'Modificat la', 'value': '2025-08-21T10:34:13.840+0000'}, {'label': 'Creat de', 'value': 'System'}, {'label': 'Modificat de', 'value': 'Administrator'}, {'la
+2025-08-21 13:37:05 - INFO - ✅ Tool HTTP get_node_info executat cu succes
+2025-08-21 13:37:05 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '98c7dd03-7673-4fc2-8248-a9d66b763b5b', 'result': {'content': [{'type': 'text', 'text': '{\'node\': {\'id\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\', \'name\': \'Data Dictionary\', \'type\': \'folder\', \'nodeType\': \'cm:folder\', \'created\': \'2025-08-21T10:20:24.038+0000\', \'modified\': \'2025-08-21T10:34:13.840+0000\', \'createdBy\': \'System\', \'modifiedBy\': \'Administrator\', \'parentId\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\', \'path\': \'/Company Home\', \'isRoot\': False, \'properties\': {\'title\': \'Data Dictionary\', \'description\': \'User managed definitions\'}}, \'message\': "Informații pentru nodul \'Data Dictionary\'", \'items\': [{\'label\': \'ID\', \'value\': \'2caa36d4-4a61-48b7-b2ea-2b802e313b2d\'}, {\'label\': \'Tip\', \'value\': \'folder\'}, {\'label\': \'Tip nod\', \'value\': \'cm:folder\'}, {\'label\': \'Creat la\', \'value\': \'2025-08-21T10:20:24.038+0000\'}, {\'label\': \'Modificat la\', \'value\': \'2025-08-21T10:34:13.840+0000\'}, {\'label\': \'Creat de\', \'value\': \'System\'}, {\'label\': \'Modificat de\', \'value\': \'Administrator\'}, {\'label\': \'ID Părinte\', \'value\': \'22829595-859a-4cdb-8c6b-cdadd51d3a2b\'}]}'}]}, 'error': None}
+2025-08-21 13:37:47 - DEBUG - 🔧 Apelez tool MCP HTTP: list_root_children
+2025-08-21 13:37:47 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "c6b51c8c-a431-46d2-9d55-183a8acf6cb7",
+  "method": "tools/call",
+  "params": {
+    "name": "list_root_children",
+    "arguments": {
+      "maxItems": 20
+    }
+  }
+}
+2025-08-21 13:37:48 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:37:48 - DEBUG - Body: {"jsonrpc":"2.0","id":"c6b51c8c-a431-46d2-9d55-183a8acf6cb7","result":{"content":[{"type":"text","text":"{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-
+2025-08-21 13:37:48 - INFO - ✅ Tool HTTP list_root_children executat cu succes
+2025-08-21 13:37:48 - DEBUG - Result: {'jsonrpc': '2.0', 'id': 'c6b51c8c-a431-46d2-9d55-183a8acf6cb7', 'result': {'content': [{'type': 'text', 'text': "{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-9267-c45f2109a2f5', 'name': 'IMAP Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.421+0000', 'modified': '2025-08-21T10:20:24.421+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '5551c437-66d6-40a2-aca2-e42f1d9ea6c1', 'name': 'Shared', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.382+0000', 'modified': '2025-08-21T10:20:24.382+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': 'e2b82976-8207-4959-ab69-123f5a575a97', 'name': 'Sites', 'type': 'folder', 'nodeType': 'st:sites', 'created': '2025-08-21T10:20:27.543+0000', 'modified': '2025-08-21T10:20:34.039+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '45adbe7e-957d-4cf8-a7f3-2e1cf571da34', 'name': 'User Homes', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.372+0000', 'modified': '2025-08-21T10:20:24.372+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}], 'total': 7, 'message': 'Am găsit 7 elemente în nodul -root-'}"}]}, 'error': None}
+2025-08-21 13:39:14 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_info
+2025-08-21 13:39:14 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "8d694063-2e91-4498-ae1a-181187e20532",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_info",
+    "arguments": {
+      "node_id": 1234
+    }
+  }
+}
+2025-08-21 13:39:14 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:39:14 - DEBUG - Body: {"jsonrpc":"2.0","id":"8d694063-2e91-4498-ae1a-181187e20532","result":null,"error":{"code":-32603,"message":"Internal error","data":"500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/1234?include=properties%2CaspectNames%2Cpath%2Cpermissions%2CallowableOperations'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}}
+2025-08-21 13:39:14 - WARNING - ⚠️ Tool get_node_info a returnat eroare: {'code': -32603, 'message': 'Internal error', 'data': "500: Eroare execuție tool: Client error '404 ' for url 'http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/nodes/1234?include=properties%2CaspectNames%2Cpath%2Cpermissions%2CallowableOperations'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404"}
+2025-08-21 13:40:07 - DEBUG - 🔧 Apelez tool MCP HTTP: list_root_children
+2025-08-21 13:40:07 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "a126c29d-2379-40ae-8960-ad4e12025a05",
+  "method": "tools/call",
+  "params": {
+    "name": "list_root_children",
+    "arguments": {
+      "maxItems": 100
+    }
+  }
+}
+2025-08-21 13:40:08 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:40:08 - DEBUG - Body: {"jsonrpc":"2.0","id":"a126c29d-2379-40ae-8960-ad4e12025a05","result":{"content":[{"type":"text","text":"{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-
+2025-08-21 13:40:08 - INFO - ✅ Tool HTTP list_root_children executat cu succes
+2025-08-21 13:40:08 - DEBUG - Result: {'jsonrpc': '2.0', 'id': 'a126c29d-2379-40ae-8960-ad4e12025a05', 'result': {'content': [{'type': 'text', 'text': "{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-9267-c45f2109a2f5', 'name': 'IMAP Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.421+0000', 'modified': '2025-08-21T10:20:24.421+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '5551c437-66d6-40a2-aca2-e42f1d9ea6c1', 'name': 'Shared', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.382+0000', 'modified': '2025-08-21T10:20:24.382+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': 'e2b82976-8207-4959-ab69-123f5a575a97', 'name': 'Sites', 'type': 'folder', 'nodeType': 'st:sites', 'created': '2025-08-21T10:20:27.543+0000', 'modified': '2025-08-21T10:20:34.039+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '45adbe7e-957d-4cf8-a7f3-2e1cf571da34', 'name': 'User Homes', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.372+0000', 'modified': '2025-08-21T10:20:24.372+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}], 'total': 7, 'message': 'Am găsit 7 elemente în nodul -root-'}"}]}, 'error': None}
+2025-08-21 13:41:55 - DEBUG - 🔧 Apelez tool MCP HTTP: create_folder
+2025-08-21 13:41:55 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "0fe380c4-914c-4395-ae29-f4356c1ab509",
+  "method": "tools/call",
+  "params": {
+    "name": "create_folder",
+    "arguments": {
+      "name": "numele_fisierului",
+      "parent_id": "-root-",
+      "title": "text",
+      "description": "id-ul 1234"
+    }
+  }
+}
+2025-08-21 13:41:55 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:41:55 - DEBUG - Body: {"jsonrpc":"2.0","id":"0fe380c4-914c-4395-ae29-f4356c1ab509","result":{"content":[{"type":"text","text":"{'created': True, 'folder_id': '551cd040-c38b-4d81-923f-ba82417815fc', 'folder_name': 'numele_fisierului', 'parent_id': '-root-', 'message': \"Folderul 'numele_fisierului' a fost creat cu succes\"}"}]},"error":null}
+2025-08-21 13:41:55 - INFO - ✅ Tool HTTP create_folder executat cu succes
+2025-08-21 13:41:55 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '0fe380c4-914c-4395-ae29-f4356c1ab509', 'result': {'content': [{'type': 'text', 'text': '{\'created\': True, \'folder_id\': \'551cd040-c38b-4d81-923f-ba82417815fc\', \'folder_name\': \'numele_fisierului\', \'parent_id\': \'-root-\', \'message\': "Folderul \'numele_fisierului\' a fost creat cu succes"}'}]}, 'error': None}
+2025-08-21 13:42:40 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_id_by_name
+2025-08-21 13:42:40 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "29cd0562-bf0d-40fb-b714-48a82c919721",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_id_by_name",
+    "arguments": {
+      "name": "numele_fisierului"
+    }
+  }
+}
+2025-08-21 13:42:40 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:42:40 - DEBUG - Body: {"jsonrpc":"2.0","id":"29cd0562-bf0d-40fb-b714-48a82c919721","result":{"content":[{"type":"text","text":"{'id': '551cd040-c38b-4d81-923f-ba82417815fc', 'name': 'numele_fisierului', 'type': 'folder', 'message': \"Nodul 'numele_fisierului' are ID-ul: 551cd040-c38b-4d81-923f-ba82417815fc (tip: folder)\"}"}]},"error":null}
+2025-08-21 13:42:40 - INFO - ✅ Tool HTTP get_node_id_by_name executat cu succes
+2025-08-21 13:42:40 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '29cd0562-bf0d-40fb-b714-48a82c919721', 'result': {'content': [{'type': 'text', 'text': '{\'id\': \'551cd040-c38b-4d81-923f-ba82417815fc\', \'name\': \'numele_fisierului\', \'type\': \'folder\', \'message\': "Nodul \'numele_fisierului\' are ID-ul: 551cd040-c38b-4d81-923f-ba82417815fc (tip: folder)"}'}]}, 'error': None}
+2025-08-21 13:43:19 - DEBUG - 🔧 Apelez tool MCP HTTP: list_root_children
+2025-08-21 13:43:19 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "4aa03f35-70fc-46b3-bf82-9a606c488072",
+  "method": "tools/call",
+  "params": {
+    "name": "list_root_children",
+    "arguments": {
+      "maxItems": 100
+    }
+  }
+}
+2025-08-21 13:43:19 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:43:19 - DEBUG - Body: {"jsonrpc":"2.0","id":"4aa03f35-70fc-46b3-bf82-9a606c488072","result":{"content":[{"type":"text","text":"{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-
+2025-08-21 13:43:19 - INFO - ✅ Tool HTTP list_root_children executat cu succes
+2025-08-21 13:43:19 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '4aa03f35-70fc-46b3-bf82-9a606c488072', 'result': {'content': [{'type': 'text', 'text': "{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-9267-c45f2109a2f5', 'name': 'IMAP Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.421+0000', 'modified': '2025-08-21T10:20:24.421+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '551cd040-c38b-4d81-923f-ba82417815fc', 'name': 'numele_fisierului', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:41:55.206+0000', 'modified': '2025-08-21T10:41:55.206+0000', 'createdBy': 'Administrator', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '5551c437-66d6-40a2-aca2-e42f1d9ea6c1', 'name': 'Shared', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.382+0000', 'modified': '2025-08-21T10:20:24.382+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': 'e2b82976-8207-4959-ab69-123f5a575a97', 'name': 'Sites', 'type': 'folder', 'nodeType': 'st:sites', 'created': '2025-08-21T10:20:27.543+0000', 'modified': '2025-08-21T10:20:34.039+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '45adbe7e-957d-4cf8-a7f3-2e1cf571da34', 'name': 'User Homes', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.372+0000', 'modified': '2025-08-21T10:20:24.372+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}], 'total': 8, 'message': 'Am găsit 8 elemente în nodul -root-'}"}]}, 'error': None}
+2025-08-21 13:44:15 - DEBUG - 🔧 Apelez tool MCP HTTP: delete_node
+2025-08-21 13:44:15 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "290fe092-f329-486e-ab13-27c286f1b5d2",
+  "method": "tools/call",
+  "params": {
+    "name": "delete_node",
+    "arguments": {
+      "node_id": "551cd040-c38b-4d81-923f-ba82417815fc",
+      "permanent": true
+    }
+  }
+}
+2025-08-21 13:44:15 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:44:15 - DEBUG - Body: {"jsonrpc":"2.0","id":"290fe092-f329-486e-ab13-27c286f1b5d2","result":{"content":[{"type":"text","text":"{'deleted': True, 'node_id': '551cd040-c38b-4d81-923f-ba82417815fc', 'permanent': True, 'message': 'Nodul 551cd040-c38b-4d81-923f-ba82417815fc a fost șters permanent'}"}]},"error":null}
+2025-08-21 13:44:15 - INFO - ✅ Tool HTTP delete_node executat cu succes
+2025-08-21 13:44:15 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '290fe092-f329-486e-ab13-27c286f1b5d2', 'result': {'content': [{'type': 'text', 'text': "{'deleted': True, 'node_id': '551cd040-c38b-4d81-923f-ba82417815fc', 'permanent': True, 'message': 'Nodul 551cd040-c38b-4d81-923f-ba82417815fc a fost șters permanent'}"}]}, 'error': None}
+2025-08-21 13:44:39 - DEBUG - 🔧 Apelez tool MCP HTTP: list_root_children
+2025-08-21 13:44:39 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "2a6823fb-0cfb-4071-b8a5-0226ef48ec1c",
+  "method": "tools/call",
+  "params": {
+    "name": "list_root_children",
+    "arguments": {
+      "maxItems": 100
+    }
+  }
+}
+2025-08-21 13:44:39 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:44:39 - DEBUG - Body: {"jsonrpc":"2.0","id":"2a6823fb-0cfb-4071-b8a5-0226ef48ec1c","result":{"content":[{"type":"text","text":"{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-
+2025-08-21 13:44:39 - INFO - ✅ Tool HTTP list_root_children executat cu succes
+2025-08-21 13:44:39 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '2a6823fb-0cfb-4071-b8a5-0226ef48ec1c', 'result': {'content': [{'type': 'text', 'text': "{'parent_id': '-root-', 'items': [{'id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'name': 'Data Dictionary', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.038+0000', 'modified': '2025-08-21T10:34:13.840+0000', 'createdBy': 'System', 'modifiedBy': 'Administrator', 'path': '/Company Home'}, {'id': '1d5a2645-2cf5-444d-8cc3-83d2e6ac3944', 'name': 'Guest Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.336+0000', 'modified': '2025-08-21T10:20:24.336+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '11f7cca2-2bb0-49b9-b429-71e3c582ca81', 'name': 'Imap Attachments', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.409+0000', 'modified': '2025-08-21T10:20:24.409+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '406a1014-a495-498c-9267-c45f2109a2f5', 'name': 'IMAP Home', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.421+0000', 'modified': '2025-08-21T10:20:24.421+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '5551c437-66d6-40a2-aca2-e42f1d9ea6c1', 'name': 'Shared', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.382+0000', 'modified': '2025-08-21T10:20:24.382+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': 'e2b82976-8207-4959-ab69-123f5a575a97', 'name': 'Sites', 'type': 'folder', 'nodeType': 'st:sites', 'created': '2025-08-21T10:20:27.543+0000', 'modified': '2025-08-21T10:20:34.039+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}, {'id': '45adbe7e-957d-4cf8-a7f3-2e1cf571da34', 'name': 'User Homes', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.372+0000', 'modified': '2025-08-21T10:20:24.372+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home'}], 'total': 7, 'message': 'Am găsit 7 elemente în nodul -root-'}"}]}, 'error': None}
+2025-08-21 13:46:19 - DEBUG - 🔧 Apelez tool MCP HTTP: get_node_children
+2025-08-21 13:46:19 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "f32b1a50-9276-47dc-8650-ad466ba8d491",
+  "method": "tools/call",
+  "params": {
+    "name": "get_node_children",
+    "arguments": {
+      "node_id": "2caa36d4-4a61-48b7-b2ea-2b802e313b2d",
+      "maxItems": 100
+    }
+  }
+}
+2025-08-21 13:46:19 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:46:19 - DEBUG - Body: {"jsonrpc":"2.0","id":"f32b1a50-9276-47dc-8650-ad466ba8d491","result":{"content":[{"type":"text","text":"{'parent_id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'items': [{'id': 'd46f7f22-dbb3-4010-9402-7d509832fc64', 'name': 'Email Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.124+0000', 'modified': '2025-08-21T10:20:29.130+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'c6078229-8f43-4d9d-ace2-dda185e42f20', 'name': 'Imap Configs', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:28.040+0000', 'modified': '2025-08-21T10:20:28.040+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '3a480a43-b16e-4e18-a220-739924a72b50', 'name': 'Messages', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.450+0000', 'modified': '2025-08-21T10:20:27.450+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'pat
+2025-08-21 13:46:19 - INFO - ✅ Tool HTTP get_node_children executat cu succes
+2025-08-21 13:46:19 - DEBUG - Result: {'jsonrpc': '2.0', 'id': 'f32b1a50-9276-47dc-8650-ad466ba8d491', 'result': {'content': [{'type': 'text', 'text': "{'parent_id': '2caa36d4-4a61-48b7-b2ea-2b802e313b2d', 'items': [{'id': 'd46f7f22-dbb3-4010-9402-7d509832fc64', 'name': 'Email Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.124+0000', 'modified': '2025-08-21T10:20:29.130+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'c6078229-8f43-4d9d-ace2-dda185e42f20', 'name': 'Imap Configs', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:28.040+0000', 'modified': '2025-08-21T10:20:28.040+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '3a480a43-b16e-4e18-a220-739924a72b50', 'name': 'Messages', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.450+0000', 'modified': '2025-08-21T10:20:27.450+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'a9a9f477-5c57-11dc-ad6c-5136d620963c', 'name': 'Models', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.376+0000', 'modified': '2025-08-21T10:20:27.376+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '0bcaad19-e1ad-4bb6-980b-64c2a600917e', 'name': 'Node Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.250+0000', 'modified': '2025-08-21T10:20:24.250+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'cd7358f8-37d2-45b8-9cfe-a48d449b15e7', 'name': 'numele_fisierului', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:34:13.808+0000', 'modified': '2025-08-21T10:34:13.808+0000', 'createdBy': 'Administrator', 'modifiedBy': 'Administrator', 'path': '/Company Home/Data Dictionary'}, {'id': 'dc47abf5-8325-40e7-8fde-1abe31bbaed0', 'name': 'Presentation Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.109+0000', 'modified': '2025-08-21T10:20:29.130+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'rendering_actions_space', 'name': 'Rendering Actions Space', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:28.108+0000', 'modified': '2025-08-21T10:20:35.472+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'replication_actions_space', 'name': 'Replication Actions Space', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:28.116+0000', 'modified': '2025-08-21T10:20:28.116+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '423e367a-edaf-48a0-a92d-ca1db5446d2f', 'name': 'RSS Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.153+0000', 'modified': '2025-08-21T10:20:29.130+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'ed08287a-beba-4f32-9613-18e13530d1d8', 'name': 'Saved Searches', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.187+0000', 'modified': '2025-08-21T10:20:24.187+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '18b6ac31-39f9-4ea1-b699-626aa4088309', 'name': 'Scheduled Actions', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:28.191+0000', 'modified': '2025-08-21T10:20:28.191+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '628648ac-6d5c-4cea-90b8-d223ae8c0f2b', 'name': 'Scripts', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.235+0000', 'modified': '2025-08-21T10:20:31.210+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'ed66811f-a42a-4a68-a795-2b7f76c9c317', 'name': 'Smart Folder Downloads', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.304+0000', 'modified': '2025-08-21T10:20:24.304+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '79a92ffd-de40-41d7-8636-cadd6d0547cd', 'name': 'Smart Folder Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.268+0000', 'modified': '2025-08-21T10:20:29.130+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'solr_facets_root_space', 'name': 'Solr Facets Space', 'type': 'folder', 'nodeType': 'srft:facets', 'created': '2025-08-21T10:20:35.715+0000', 'modified': '2025-08-21T10:20:35.715+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '95cd77dd-b429-4c20-8eef-e4a50aca7d7a', 'name': 'Space Templates', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:24.092+0000', 'modified': '2025-08-21T10:20:29.130+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'e55b20e9-95bc-443a-8fda-2aea7b96fd18', 'name': 'Transfers', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:28.076+0000', 'modified': '2025-08-21T10:20:28.076+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': 'e540a352-8002-4c92-86b8-318aa8581bd2', 'name': 'Web Client Extension', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.459+0000', 'modified': '2025-08-21T10:20:27.459+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '598ec8aa-5986-486a-9a9a-08bcbb765585', 'name': 'Web Scripts', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.079+0000', 'modified': '2025-08-21T10:20:27.079+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '1aa4ed9a-6d8f-4699-ae7a-eb2ba6afc504', 'name': 'Web Scripts Extensions', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.335+0000', 'modified': '2025-08-21T10:20:27.335+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}, {'id': '05590cd0-607e-11dc-af48-8b100325f217', 'name': 'Workflow Definitions', 'type': 'folder', 'nodeType': 'cm:folder', 'created': '2025-08-21T10:20:27.469+0000', 'modified': '2025-08-21T10:20:27.469+0000', 'createdBy': 'System', 'modifiedBy': 'System', 'path': '/Company Home/Data Dictionary'}], 'total': 22, 'message': 'Am găsit 22 elemente în nodul 2caa36d4-4a61-48b7-b2ea-2b802e313b2d'}"}]}, 'error': None}
+2025-08-21 13:47:24 - DEBUG - 🔧 Apelez tool MCP HTTP: browse_by_path
+2025-08-21 13:47:24 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "1aeb8bd3-1485-486d-b7d4-12287afccd02",
+  "method": "tools/call",
+  "params": {
+    "name": "browse_by_path",
+    "arguments": {
+      "path": "/Company Home/Sites/"
+    }
+  }
+}
+2025-08-21 13:47:25 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:47:25 - DEBUG - Body: {"jsonrpc":"2.0","id":"1aeb8bd3-1485-486d-b7d4-12287afccd02","result":{"content":[{"type":"text","text":"{'error': True, 'message': \"Nu am găsit 'Company Home' în root. Pentru configurația minimală folosește ID-uri de noduri.\"}"}]},"error":null}
+2025-08-21 13:47:25 - INFO - ✅ Tool HTTP browse_by_path executat cu succes
+2025-08-21 13:47:25 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '1aeb8bd3-1485-486d-b7d4-12287afccd02', 'result': {'content': [{'type': 'text', 'text': '{\'error\': True, \'message\': "Nu am găsit \'Company Home\' în root. Pentru configurația minimală folosește ID-uri de noduri."}'}]}, 'error': None}
+2025-08-21 13:48:47 - DEBUG - 🔧 Apelez tool MCP HTTP: browse_by_path
+2025-08-21 13:48:47 - DEBUG - ➡️ REQUEST: POST http://localhost:8002/mcp {
+  "jsonrpc": "2.0",
+  "id": "4e173862-3e99-40b9-bb51-f522b5acd30f",
+  "method": "tools/call",
+  "params": {
+    "name": "browse_by_path",
+    "arguments": {
+      "path": "/Email Templates"
+    }
+  }
+}
+2025-08-21 13:48:47 - DEBUG - ⬅️ RESPONSE 200 OK
+2025-08-21 13:48:47 - DEBUG - Body: {"jsonrpc":"2.0","id":"4e173862-3e99-40b9-bb51-f522b5acd30f","result":{"content":[{"type":"text","text":"{'error': True, 'message': \"Nu am găsit 'Company Home' în root. Pentru configurația minimală folosește ID-uri de noduri.\"}"}]},"error":null}
+2025-08-21 13:48:47 - INFO - ✅ Tool HTTP browse_by_path executat cu succes
+2025-08-21 13:48:47 - DEBUG - Result: {'jsonrpc': '2.0', 'id': '4e173862-3e99-40b9-bb51-f522b5acd30f', 'result': {'content': [{'type': 'text', 'text': '{\'error\': True, \'message\': "Nu am găsit \'Company Home\' în root. Pentru configurația minimală folosește ID-uri de noduri."}'}]}, 'error': None}

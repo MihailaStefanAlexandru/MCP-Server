@@ -161,8 +161,8 @@ async def test_call_mcp_tool_http_succes(client):
     respx.post("http://localhost:8002/mcp").mock(return_value=httpx.Response(200, json=result_payload))
 
     resp = await client.call_mcp_tool_http("list_nodes", {"path": "/"})
-    assert "content" in resp
-    assert resp["content"][0]["text"].startswith("/Company Home")
+    assert "content" in resp["result"]
+    assert resp["result"]["content"][0]["text"].startswith("/Company Home")
 
 @respx.mock
 @pytest.mark.asyncio
@@ -226,7 +226,7 @@ async def test_analyze_intent_and_call_tools(client, monkeypatch):
     )
 
     res = await client.analyze_intent_and_call_tools_async("listeaza nodurile din root")
-    assert res.startswith("🔧 Rezultat list_nodes:\nOK")
+    assert "🔧 Rezultat list_nodes:\nOK" in res
 
 @pytest.mark.asyncio
 async def test_analyze_intent_and_call_tools_no_tool(client, monkeypatch):

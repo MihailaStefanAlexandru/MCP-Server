@@ -6,7 +6,7 @@ import asyncio
 import os
 import time
 import logging
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from Clase.MCPHTTPClient import MCPHTTPClient
 
@@ -145,7 +145,7 @@ class OpenWebUIHTTPAdapter:
                 if context_messages:
                     context_str = "\nContext conversație:\n" + "\n".join(context_messages) + "\n"
                 
-                # Creează prompt îmbunătățit - acum tool_results e STRING
+                # Creează prompt îmbunătățit
                 logger.info("📋 Creez prompt îmbunătățit pentru HTTP...")
                 enhanced_prompt = client.create_enhanced_prompt(user_message, tool_results)
                 
