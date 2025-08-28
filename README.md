@@ -1,79 +1,76 @@
-# MCP-Server
+# MCP
 
-## Testare pentru Claude Desktop
+## MCP protocol
 
-1. Listare conținut root
+MCP este un protocol deschis care standardizează modul în care aplicațiile oferă context modelelor lingvistice mari (LLM). MCP este asemenea unui port USB-C pentru aplicații de inteligență artificială. Așa cum USB-C oferă o modalitate standardizată de a conecta dispozitivele la diverse periferice și accesorii, MCP oferă o modalitate standardizată de a conecta modelele de inteligență artificială la diferite surse de date și instrumente. MCP permite construcția de agenți și fluxuri de lucru complexe pe baza LLM-urilor și conectarea modelele cu lumea.
 
-Listează toate fișierele și folderele din root-ul Alfresco.
+MCP oferă:
 
-2. Creare folder nou
+- O listă mare de integrări predefinite la care LLM-ul se poate conecta direct.
+- O modalitate standard pentru a construi integrări personalizate pentru aplicațiile AI.
+- Un protocol deschis pe care toată lumea îl poate implementa și folosi.
+- Flexibilitatea de a schimba între diferite aplicații și de a lua contextul pentru utilizare.
 
-Creează un folder numit "TestFolder" în root.
+MCP constă în două layere:
 
-SAU
+- Data Layer: definește protocolul bazat pe JSON-RPC pentru comunicarea client-server, incluzând managementul ciclului de viață, primitive esențiale, cum ar fi instrumente, resurse, prompt-uri și notificări.
+- Transport Layer: definește mecanismul de comunicare și canalele care permit schimbul de date dintre client și server, incluzând și stabilizarea conexiunii specifice transportului, înrămarea mesajelor și autorizare.
 
-Creează un folder numit "TestFolder" cu titlul "Exemplu MCP" și descrierea "Folder creat pentru testare", în directorul root.
+## Arhitectura Proiectului
 
-3. Listare copii ai unui nod
+### Schema Bloc Software
 
-Arată conținutul folderului cu ID-ul [copiat din rezultatul anterior].
+![Schema_Bloc](Schema_Bloc.svg)
 
-4. Informații despre un nod
+### Considerații teoretice de implementare utilizate
 
-Afișează toate informațiile disponibile despre nodul cu ID-ul [id-ul folderului TestFolder].
+Comunicarea dintre server și client se poate efectua prin fluxuri standard (STDIO) și prin protocolul HTTP.
 
-5. Ștergere logică
+În această implementare a fost aleasă o abordare bazată pe protocolul HTTP întrucât cel mai adesea, pentru mulți utilizatori, serverul și clientul nu le sunt ambele accesibile, aceștia putând avea la dispoziție doar una din cele două componente care operează local.
+Cu toate acestea a fost studiată și o implementare prin fluxuri standard.
 
-Șterge folderul cu ID-ul [id-ul folderului] și trimite-l în coșul de gunoi.
+| HTTP | STDIO |
+| ---------- | --------- |
+| Serverul poate rula pe altă mașină în cloud, containerizat | Comunicare în cadrul aceluiași proces |
+| Integrare mai ușoară cu OpenWebUI sau cu alte aplicații care folosesc HTTP | Izolare ceea ce contribuie la securitate |
+| Testare și Debugging mai simple | Performanță mai bună deoarece nu avem overhead de rețea |
+| Scalabilitate, se poate adauga autentificare, logging centralizat | Bun pentru testare și integrare în sisteme CLI |
 
-6. Ștergere permanentă
+#### Serverul
 
-Șterge definitiv nodul cu ID-ul [id-ul folderului].
+Pentru implementarea protocolului este necesară prezența a două entități. Acestea sunt serverul și clientul.
 
-7. Navigare după path
+Serverul este puntea de legătură dintre sistemul de gestiune al fișierelor (sau o altă construcție cu totul) și client. El trebuie să expună instrumentele utilizabile către client astfel încât llm-ul să poată ști ce are la dispoziție pentru a îndeplini cerințele user-ului.
 
-Navighează la calea /Company Home/Documente.
+Tool-urile sunt definite conform documnetației astfel:
 
-## Pornire imagine docker openwebui
-
-docker run -d \
-  -p 3000:3000 \
-  -v openwebui-data:/app/backend/data \
-  -e PORT=3000 \
-  -e OPENAI_API_BASE_URL=http://host.docker.internal:8001/v1 \
-  -e OPENAI_API_KEY=sk-anything \
-  -e WEBUI_SECRET_KEY=your-secret-key \
-  --add-host=host.docker.internal:host-gateway \
-  --name openwebui \
-  ghcr.io/open-webui/open-webui:main
-
-## Adaugare model in openwebui
-
-OpenAI API \
-API Base URL: http://localhost:8001/v1 \
-API Key: sk-any-key (orice string, nu e validat)
-
-## Schemă Bloc software
-
-![Schema_Bloc](Schema_bloc.svg)
-
-system prompt
-context pentru functii
-
+(exemplu este implementarea tool-ului list_root_children)
 ```
-system_prompt = {
-            "role": "system",
-            "content": (
-                "You are an assistant with access to MCP filesystem tools. "
-                "For any filesystem-related request (e.g., listing files, reading files, writing files, creating directories, etc.), "
-                "immediately select and use the appropriate MCP filesystem tool based on the request's intent. "
-                "Available tools include: list_directory_mcp_filesystem, read_file_mcp_filesystem, write_file_mcp_filesystem, "
-                "edit_file_mcp_filesystem, create_directory_mcp_filesystem, list_directory_with_sizes_mcp_filesystem, "
-                "directory_tree_mcp_filesystem, move_file_mcp_filesystem, search_files_mcp_filesystem, get_file_info_mcp_filesystem, "
-                "list_allowed_directories_mcp_filesystem. "
-                "Use the tool that best matches the request (e.g., list_directory_mcp_filesystem for listing files, read_file_mcp_filesystem for reading file contents). "
-                "Do NOT generate descriptive text, explanations, or any content unless explicitly requested. "
-                "Respond ONLY with the appropriate tool call."
-            )
-        }
+Tool(
+  name="list_root_children",
+  description="Listează fișierele și folderele din root-ul Alfresco",
+  inputSchema={
+    "type": "object",
+    "properties": {
+    "maxItems": {
+        "type": "integer",
+        "description": "Numărul maxim de elemente de returnat (default: 20)",
+        "default": 20
+      }
+    }
+  }
+)
 ```
+
+## Instalare și Configurare
+
+## Ghid de utilizare
+
+## Testare
+
+## Test prompts
+
+Exemplele de testare au fost mutate în fișierul Test-prompts.md pentru a nu încărca fișierul de documentație.
+
+## Resurse
+
