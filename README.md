@@ -20,7 +20,7 @@ MCP constă în două layere:
 
 ### Schema Bloc Software
 
-![Schema_Bloc](Schema_Bloc.svg)
+![Schema_Bloc](Schema_bloc.svg)
 
 ### Considerații teoretice de implementare utilizate
 
