@@ -178,7 +178,17 @@ class MinimalAlfrescoServer:
                     )
                     context = "folder creation"
                 elif name == "get_node_info":
-                    result = await self.get_node_info(arguments["node_id"])
+                    node_id = arguments.get("node_id", "")
+                    # Validare rapidă înainte de HTTP call
+                    import re
+                    uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+                    if not re.search(uuid_pattern, node_id, re.IGNORECASE):
+                        return [types.TextContent(type="text", text=json.dumps({
+                            "error": True,
+                            "message": f"node_id '{node_id}' nu este un UUID valid. Obține mai întâi ID-ul cu list_root_children sau get_node_id_by_name.",
+                            "tool": name
+                        }))]
+                    result = await self.get_node_info(node_id)
                     context = "node information"
                 elif name == "delete_node":
                     result = await self.delete_node(arguments["node_id"], arguments.get("permanent", False))
@@ -192,13 +202,18 @@ class MinimalAlfrescoServer:
                 else:
                     return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
                 
-                # Formatează pentru TinyLlama
-                formatted_result = self.format_simple_response(result, context)
-                
-                # Răspuns mai concis
-                response_text = json.dumps(formatted_result, indent=1, ensure_ascii=False)
-                
-                return [types.TextContent(type="text", text=response_text)]
+                response = {
+                    "tool": name,
+                    "context": context,
+                    "result": result
+                }
+
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=json.dumps(response, indent=2, ensure_ascii=False)
+                    )
+                ]
             
             except Exception as e:
                 error_msg = f"Error in {name}: {str(e)}"
@@ -290,7 +305,18 @@ class MinimalAlfrescoServer:
         }
     
     async def create_folder(self, name: str, parent_id: str = "-root-", title: str = None, description: str = None) -> Dict[str, Any]:
-        """Creează un folder nou"""
+        """Creează un folder nou dacă nu există deja"""
+
+        children = await self.get_node_children(parent_id, 100)
+
+        for item in children.get("items", []):
+            if item["name"] == name and item["type"] == "folder":
+                return {
+                    "created": False,
+                    "folder_id": item["id"],
+                    "message": f"Folderul '{name}' există deja"
+                }
+
         url = urljoin(self.base_url, f"/alfresco/api/-default-/public/alfresco/versions/1/nodes/{parent_id}/children")
         
         folder_data = {
@@ -321,6 +347,20 @@ class MinimalAlfrescoServer:
     
     async def get_node_info(self, node_id: str) -> Dict[str, Any]:
         """Obține informații detaliate despre un nod"""
+        import re
+
+        # Sanitizare mai inteligentă: extrage primul UUID valid din string
+        uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        match = re.search(uuid_pattern, node_id.strip(), re.IGNORECASE)
+        
+        if not match:
+            return {
+                "error": True,
+                "message": f"node_id invalid: '{node_id}' nu conține un UUID valid"
+            }
+        
+        node_id = match.group()  # UUID curat, garantat valid
+        
         url = urljoin(self.base_url, f"/alfresco/api/-default-/public/alfresco/versions/1/nodes/{node_id}")
         
         params = {
@@ -384,6 +424,19 @@ class MinimalAlfrescoServer:
     
     async def delete_node(self, node_id: str, permanent: bool = False) -> Dict[str, Any]:
         """Șterge un nod"""
+        import re
+
+        uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        match = re.search(uuid_pattern, node_id, re.IGNORECASE)
+
+        if not match:
+            return {
+                "error": True,
+                "message": "node_id invalid"
+            }
+
+        node_id = match.group()
+
         url = urljoin(self.base_url, f"/alfresco/api/-default-/public/alfresco/versions/1/nodes/{node_id}")
         
         params = {}
@@ -401,19 +454,42 @@ class MinimalAlfrescoServer:
         }
     
     async def get_node_id_by_name(self, name: str) -> Dict[str, Any]:
-        """Caută în root node-ul cu un anumit nume și returnează ID-ul său"""
-        children = await self.get_node_children("-root-", 30)
-        for item in children.get("items", []):
-            if item["name"] == name:
-                return {
-                    "id": item["id"],
-                    "name": item["name"],
-                    "type": item["type"],
-                    "message": f"Nodul '{name}' are ID-ul: {item['id']} (tip: {item['type']})"
-                }
+        """Caută un nod după nume în repository (căutare BFS limitată)"""
+
+        start_node = "-root-"
+        max_depth = 3
+
+        queue = [(start_node, 0)]
+        visited = set()
+
+        while queue:
+            node_id, depth = queue.pop(0)
+
+            if node_id in visited:
+                continue
+            visited.add(node_id)
+
+            if depth > max_depth:
+                continue
+
+            children = await self.get_node_children(node_id, 100)
+
+            for item in children.get("items", []):
+                if item["name"] == name:
+                    return {
+                        "error": False,
+                        "node_id": item["id"],
+                        "name": item["name"],
+                        "type": item["type"],
+                        "parent_id": node_id
+                    }
+
+                if item["type"] == "folder":
+                    queue.append((item["id"], depth + 1))
+
         return {
             "error": True,
-            "message": f"Nodul '{name}' nu a fost găsit în root"
+            "message": f"Nodul '{name}' nu a fost găsit (căutare până la depth {max_depth})"
         }
     
     async def browse_by_path(self, path: str = "/") -> Dict[str, Any]:
@@ -425,34 +501,28 @@ class MinimalAlfrescoServer:
             # Root
             return await self.list_root_children()
         
-        # Încercăm să găsim path-ul prin Company Home
-        # Aceasta este o implementare simplificată
-        try:
-            # Căutăm în root pentru "Company Home"
-            root_children = await self.get_node_children("-root-", 100)
-            
-            company_home_id = None
-            for item in root_children["items"]:
-                if item["name"] == "Company Home" and item["type"] == "folder":
-                    company_home_id = item["id"]
+        parts = [p for p in path.split("/") if p]
+
+        current_node = "-root-"
+        
+        for part in parts:
+            children = await self.get_node_children(current_node, 100)
+
+            match = None
+            for item in children.get("items", []):
+                if item["name"] == part and item["type"] == "folder":
+                    match = item
                     break
-            
-            if not company_home_id:
+
+            if not match:
                 return {
                     "error": True,
-                    "message": "Nu am găsit 'Company Home' în root. Pentru configurația minimală folosește ID-uri de noduri."
+                    "message": f"Folderul '{part}' nu există în path '{path}'"
                 }
-            
-            # Pentru simplitate, returnăm conținutul Company Home
-            result = await self.get_node_children(company_home_id)
-            result["message"] = f"Navighează la path: {path} (Company Home)"
-            return result
-            
-        except Exception as e:
-            return {
-                "error": True,
-                "message": f"Nu pot naviga la path-ul '{path}': {str(e)}. În configurația minimală, folosește tool-ul 'get_node_children' cu ID-uri specifice."
-            }
+
+            current_node = match["id"]
+
+        return await self.get_node_children(current_node)
         
     def format_simple_response(self, result: Any, context: str = "") -> Dict[str, Any]:
         """Formatează un răspuns simplificat, text-based, pentru modele LLM mici"""
@@ -466,10 +536,17 @@ class MinimalAlfrescoServer:
                     name = item.get("name", "")
                     node_type = item.get("type", "")
                     node_id = item.get("id", "")
-                    simplified_items.append(f"- {name} [{node_type}] (ID: {node_id})")
+                    simplified_items.append({
+                        "name": name,
+                        "type": node_type,
+                        "id": node_id
+                    })
                 elif "label" in item and "value" in item:
                     # E o informație cheie-valoare
-                    simplified_items.append(f"{item['label']}: {item['value']}")
+                    simplified_items.append({
+                        "label": item['label'], 
+                        "value": item['value']
+                    })
 
             return {
                 "context": context,

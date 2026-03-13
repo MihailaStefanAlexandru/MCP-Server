@@ -9,6 +9,13 @@ from typing import Optional, Dict, Any
 import uuid
 import re
 
+def is_valid_uuid(value):
+    try:
+        uuid.UUID(value)
+        return True
+    except ValueError:
+        return False
+
 class MCPStdioLLMClient:
     def __init__(self, config_path: str):
         with open(config_path, 'r') as f:
@@ -353,6 +360,8 @@ class MCPStdioLLMClient:
                 "name": tool_name,
                 "arguments": arguments
             }
+
+            print("DEBUG TOOL ARGUMENTS:", arguments)
             
             result = self.send_mcp_request("tools/call", call_params, timeout=60.0)
             
@@ -369,117 +378,283 @@ class MCPStdioLLMClient:
         except Exception as e:
             print(f"❌ Eroare apelare tool MCP: {e}")
             return {"error": str(e)}
+        
+    def extract_node_id_from_result(tool_result) -> str | None:
+        """
+        Extrage primul UUID valid.
+        Gestionează wrapper-ul {"tool", "context", "result"} al serverului.
+        """
+        if isinstance(tool_result, dict):
+            # Unwrap răspunsul serverului dacă e necesar
+            if "result" in tool_result and isinstance(tool_result["result"], dict):
+                tool_result = tool_result["result"]
+            
+            # Caută în câmpuri comune
+            for key in ('id', 'node_id', 'nodeId'):
+                val = tool_result.get(key, "")
+                if isinstance(val, str) and is_valid_uuid(val):
+                    return val
+            
+            # Caută în 'entry'
+            entry = tool_result.get('entry', {})
+            if isinstance(entry, dict):
+                for key in ('id', 'node_id'):
+                    val = entry.get(key, "")
+                    if val and is_valid_uuid(val):
+                        return val
+            
+            # Caută în 'items' (listă de noduri)
+            items = tool_result.get('items', [])
+            if isinstance(items, list) and items:
+                first = items[0]
+                if isinstance(first, dict):
+                    val = first.get('id') or first.get('node_id', '')
+                    if val and is_valid_uuid(val):
+                        return val
+        
+        # Fallback: regex pe tot JSON-ul
+        text = json.dumps(tool_result) if isinstance(tool_result, (dict, list)) else str(tool_result)
+        uuids = re.findall(
+            r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+            text, re.IGNORECASE
+        )
+        return uuids[0] if uuids else None
+
+
+    def extract_items_from_result(tool_result) -> list:
+        """
+        Extrage lista de iteme.
+        Gestionează wrapper-ul {"tool", "context", "result"} al serverului.
+        """
+        # Unwrap răspunsul serverului
+        if isinstance(tool_result, dict) and "result" in tool_result:
+            tool_result = tool_result["result"]
+        
+        if not isinstance(tool_result, dict):
+            return []
+        
+        # Structura serverului tău: {"items": [...], "total": N, "message": "..."}
+        items = tool_result.get("items", [])
+        if isinstance(items, list):
+            # Filtrează doar itemele cu 'id' și 'name' (nu cele label/value din get_node_info)
+            node_items = [i for i in items if "id" in i and "name" in i]
+            if node_items:
+                return node_items
+        
+        # Fallback pentru structura Alfresco standard
+        nested = tool_result.get('list', {})
+        if isinstance(nested, dict):
+            entries = nested.get('entries', [])
+            return [e.get('entry', e) for e in entries if isinstance(e, dict)]
+        
+        return []
+    
+    def resolve_placeholder_arguments(arguments: dict, agent_state: dict) -> dict:
+        """
+        Înlocuiește orice valoare non-UUID în câmpurile *_id cu UUID-ul din agent_state.
+        Previne trimiterea de placeholder-uri literale la Alfresco.
+        """
+        resolved = dict(arguments)
+        
+        for key, value in resolved.items():
+            if 'id' in key.lower() and isinstance(value, str):
+                if not is_valid_uuid(value):
+                    # Valoarea e un placeholder — înlocuim cu ce avem în state
+                    fallback = (
+                        agent_state.get('last_node_id') or
+                        agent_state.get('first_node_id')
+                    )
+                    if fallback:
+                        print(f"⚠️  Placeholder detectat '{value}' → înlocuit cu '{fallback}'")
+                        resolved[key] = fallback
+                    else:
+                        print(f"❌ Placeholder '{value}' fără fallback disponibil în agent_state")
+        
+        return resolved
 
     def analyze_intent_and_call_tools(self, user_input: str) -> str:
-        """Analizează intenția utilizatorului și apelează tool-urile MCP corespunzătoare"""
-        if not self.mcp_connected or not self.mcp_tools:
-            return "ℹ️  Nu sunt conectat la serverul MCP sau nu sunt tool-uri disponibile."
-        
-        # Creează un prompt pentru a determina ce tool-uri să apeleze
+
+        max_steps = 8
+        agent_scratchpad = ""
+        # stare persistentă între pași: node_id-uri, nume, etc.
+        agent_state = {}
+
+        # construiește descrierea tool-urilor pentru prompt
         tools_description = ""
         for tool_name, tool_info in self.mcp_tools.items():
-            desc = tool_info.get('description', 'Fără descriere')
-            schema = tool_info.get('inputSchema', {})
-            props = schema.get('properties', {})
-            params = list(props.keys()) if props else []
-            tools_description += f"- {tool_name}: {desc}\n"
-            if params:
-                tools_description += f"  Parametri: {', '.join(params)}\n"
-        
-        analysis_prompt = f"""Analizează următoarea cerere și determină ce tool MCP să apelez și cu ce parametri.
-
-Tool-uri MCP disponibile:
-{tools_description}
-
-Cererea utilizatorului: {user_input}
-
-Răspunde în format JSON strict:
-{{
-    "action": "call_tool",
-    "tool_name": "numele_tool_ului",
-    "arguments": {{"param1": "valoare1"}},
-    "explanation": "explicația acțiunii"
-}}
-
-Sau dacă nu este necesar un tool:
-{{
-    "action": "no_tool",
-    "explanation": "nu este necesar un tool MCP"
-}}
-
-IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
-
-        # Obține analiza de la LLM
-        analysis_response = self.query_llm_with_retry(analysis_prompt, max_tokens=300)
-        
-        try:
-            # Curăță răspunsul și încearcă să parseze JSON-ul
-            cleaned_response = analysis_response.strip()
+            desc = tool_info.get("description", "Fără descriere")
+            schema = tool_info.get("inputSchema", {})
+            props = schema.get("properties", {})
+            required = schema.get("required", [])
+            params_info = []
+            for p_name, p_schema in props.items():
+                req_marker = "*" if p_name in required else ""
+                p_type = p_schema.get("type", "string")
+                params_info.append(f"{p_name}{req_marker}({p_type})")
             
-            # Elimină markdown code blocks dacă există
-            if cleaned_response.startswith('```'):
-                lines = cleaned_response.split('\n')
-                cleaned_response = '\n'.join(lines[1:-1])
+            tools_description += f"- **{tool_name}**: {desc}\n"
+            if params_info:
+                tools_description += f"  Parametri (* = obligatoriu): {', '.join(params_info)}\n"
+
+        for step in range(max_steps):
+            # construiește contextul de state pentru LLM
+            state_context = ""
+            if agent_state:
+                state_context = "\n**State curent (valori REALE obținute din tool-uri):**\n"
+                for k, v in agent_state.items():
+                    state_context += f"  - {k}: `{v}`\n"
+                state_context += "**IMPORTANT: Folosește aceste valori EXACT în arguments, nu inventa altele!**\n"
+
+            prompt = f"""Ești un agent AI care rezolvă cereri pas cu pas folosind tool-uri MCP pentru Alfresco.
+
+    **Tool-uri disponibile:**
+    {tools_description}
+
+    **Cererea utilizatorului:**
+    {user_input}
+
+    **Istoric execuție (pași anteriori):**
+    {agent_scratchpad if agent_scratchpad else "Niciun pas executat încă."}
+    {state_context}
+
+    **Instrucțiuni CRITICE:**
+    1. Analizează ce s-a făcut deja și ce mai trebuie făcut
+    2. Dacă ai nevoie de un node_id, verifică State-ul curent — dacă e acolo, folosește-l EXACT
+    3. NU inventa UUID-uri sau placeholder-uri (ex: "id-ul_folderului") — acestea cauzează erori 404
+    4. Dacă task-ul e complet, returnează final_answer
+
+    Răspunde DOAR cu JSON valid (fără markdown, fără text în afara JSON-ului):
+
+    Dacă trebuie să apelezi un tool:
+    {{"action": "call_tool", "tool_name": "nume_tool", "arguments": {{}}, "reasoning": "de ce apelezi acest tool acum"}}
+
+    Dacă ai terminat și poți răspunde utilizatorului:
+    {{"action": "final_answer", "answer": "răspunsul complet și detaliat"}}
+    """
+
+            raw_response = self.query_llm_with_retry(prompt, max_tokens=400)
             
-            # Găsește JSON-ul în răspuns
-            json_match = re.search(r'\{.*\}', cleaned_response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                print(f"🔍 JSON detectat: {json_str}")
-                analysis = json.loads(json_str)
+            # parsează răspunsul LLM
+            try:
+                cleaned = raw_response.strip()
+                # elimină fences markdown dacă există
+                if cleaned.startswith("```"):
+                    lines = cleaned.split("\n")
+                    cleaned = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
                 
-                if analysis.get('action') == 'call_tool':
-                    tool_name = analysis.get('tool_name')
-                    arguments = analysis.get('arguments', {})
-                    explanation = analysis.get('explanation', '')
-                    
-                    if tool_name in self.mcp_tools:
-                        print(f"🎯 Execut: {explanation}")
-                        # Apelează tool-ul MCP
-                        tool_result = self.call_mcp_tool(tool_name, arguments)
-                        
-                        # FIX: Verifică tipul răspunsului ÎNAINTE de a apela .get()
-                        if isinstance(tool_result, str):
-                            # Dacă tool_result este string, înseamnă că e un mesaj de eroare
-                            return f"❌ Eroare la executarea {tool_name}: {tool_result}"
-                        
-                        if isinstance(tool_result, dict):
-                            # Verifică dacă există eroare în dict
-                            if tool_result.get('error'):
-                                error_msg = tool_result.get('error', 'Eroare necunoscută')
-                                return f"❌ Eroare la executarea {tool_name}: {error_msg}"
-                            
-                            # Procesează rezultatul cu succes
-                            if 'content' in tool_result:
-                                # Rezultat cu conținut structurat
-                                content_items = tool_result['content']
-                                result_text = ""
-                                for item in content_items:
-                                    if isinstance(item, dict) and item.get('type') == 'text':
-                                        result_text += item.get('text', '')
-                                    elif isinstance(item, str):
-                                        result_text += item
-                                return f"🔧 Rezultat {tool_name}:\n{result_text}"
-                            else:
-                                # Rezultat simplu
-                                result_str = json.dumps(tool_result, indent=2, ensure_ascii=False)
-                                return f"🔧 Rezultat {tool_name}:\n{result_str}"
-                        
-                        # Fallback pentru alte tipuri
-                        return f"🔧 Rezultat {tool_name}:\n{str(tool_result)}"
-                        
-                    else:
-                        return f"❌ Tool-ul '{tool_name}' nu este disponibil"
+                # extrage JSON
+                match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+                if not match:
+                    print(f"⚠️  Step {step+1}: LLM nu a returnat JSON valid: {cleaned[:200]}")
+                    agent_scratchpad += f"\nStep {step+1}: Eroare parsare răspuns LLM.\n"
+                    continue
+                
+                analysis = json.loads(match.group())
+                reasoning = analysis.get("reasoning", "")
+                
+            except json.JSONDecodeError as e:
+                print(f"⚠️  Step {step+1}: JSON invalid: {e}")
+                continue
+
+            if analysis.get("action") == "final_answer":
+                answer = analysis.get("answer", "")
+                if answer:
+                    return answer
                 else:
-                    return "ℹ️  Cererea nu necesită apelarea unui tool MCP specific."
+                    print("⚠️  final_answer fără conținut, continui...")
+                    continue
+
+            if analysis.get("action") == "call_tool":
+                tool_name = analysis.get("tool_name", "")
+                arguments = analysis.get("arguments", {})
+                
+                if tool_name not in self.mcp_tools:
+                    agent_scratchpad += f"\nStep {step+1}: Tool '{tool_name}' nu există.\n"
+                    continue
+                
+                arguments = resolve_placeholder_arguments(arguments, agent_state)
+                
+                # verificare finală: dacă tool-ul necesită un node_id valid și nu-l avem, skip
+                if "node_id" in arguments and not is_valid_uuid(arguments.get("node_id", "")):
+                    agent_scratchpad += f"""
+    Step {step+1} - Tool: {tool_name}
+    Reasoning: {reasoning}
+    Eroare: node_id invalid '{arguments.get('node_id')}' și nu există fallback în state.
+    Sfat: Apelează mai întâi list_root_children sau get_node_id_by_name pentru a obține un UUID valid.
+    """
+                    continue
+                
+                print(f"🔧 Step {step+1}/{max_steps} - Execut: {tool_name}({json.dumps(arguments)})")
+                
+                tool_result = self.call_mcp_tool(tool_name, arguments)
+                
+                observation_text = ""
+                
+                if tool_result is None:
+                    observation_text = "Tool a returnat None / eroare."
+                
+                elif isinstance(tool_result, dict) and "error" in tool_result:
+                    observation_text = f"Eroare: {tool_result['error']}"
+                
+                else:
+                    # serializează rezultatul pentru scratchpad
+                    observation_text = json.dumps(tool_result, indent=2, ensure_ascii=False)
                     
-        except json.JSONDecodeError as e:
-            print(f"⚠️  Nu pot parsa JSON din răspunsul LLM: {e}")
-            print(f"📄 Răspuns raw: {analysis_response}")
-            return "❌ Nu pot interpreta analiza pentru tool-urile MCP."
-        except Exception as e:
-            print(f"⚠️  Eroare în analiză: {e}")
-            return f"❌ Eroare în procesarea cererii pentru tool-urile MCP: {str(e)}"
+                    # list_root_children → extrage primul item
+                    items = extract_items_from_result(tool_result)
+                    if items:
+                        first_item = items[0]
+                        first_id = first_item.get('id') or first_item.get('node_id', '')
+                        first_name = first_item.get('name', '')
+                        
+                        if is_valid_uuid(first_id):
+                            agent_state['first_node_id'] = first_id
+                            agent_state['last_node_id'] = first_id
+                            if first_name:
+                                agent_state['first_node_name'] = first_name
+                            
+                            # stochează și toate itemele pentru referință
+                            agent_state['all_items'] = [
+                                {'id': it.get('id', ''), 'name': it.get('name', '')}
+                                for it in items
+                            ]
+                            print(f"✅ State actualizat: first_node_id={first_id}, name={first_name}")
+                    
+                    # get_node_id_by_name sau orice tool care returnează un singur node
+                    single_id = extract_node_id_from_result(tool_result)
+                    if single_id and is_valid_uuid(single_id):
+                        agent_state['last_node_id'] = single_id
+                        if 'first_node_id' not in agent_state:
+                            agent_state['first_node_id'] = single_id
+                        print(f"✅ State actualizat: last_node_id={single_id}")
+                    
+                    # get_node_info → stochează info nod curent
+                    if tool_name == "get_node_info":
+                        # extrage date relevante din rezultat pentru a fi afișate în răspuns
+                        node_data = tool_result
+                        if isinstance(tool_result, dict):
+                            node_data = tool_result.get('entry', tool_result)
+                        agent_state['current_node_info'] = node_data
+                
+                # adauga în scratchpad
+                agent_scratchpad += f"""
+    Step {step+1} - Tool: {tool_name}
+    Reasoning: {reasoning}
+    Arguments: {json.dumps(arguments, ensure_ascii=False)}
+    Observation:
+    {observation_text[:2000]}{"...[trunchiat]" if len(observation_text) > 2000 else ""}
+    """
+                continue
+            
+            # action necunoscută
+            print(f"⚠️  Action necunoscută: {analysis.get('action')}")
+            agent_scratchpad += f"\nStep {step+1}: Action necunoscută '{analysis.get('action')}'.\n"
+
+        # am epuizat pașii — returnează ce am colectat
+        if agent_state.get('current_node_info'):
+            return f"Am executat operațiunile cerute. Ultimul nod procesat:\n{json.dumps(agent_state['current_node_info'], indent=2, ensure_ascii=False)}"
+        
+        return f"⚠️ Limita de {max_steps} pași atinsă. State colectat: {json.dumps({k: v for k, v in agent_state.items() if k != 'all_items'}, ensure_ascii=False)}"
 
     def query_llm_with_retry(self, prompt: str, max_tokens: int = 400, retries: int = 3) -> str:
         """Interogează LLM cu retry logic și timeout"""
@@ -507,15 +682,6 @@ IMPORTANT: Răspunde DOAR cu JSON-ul, fără text suplimentar."""
                 max_tokens=max_tokens,
                 temperature=0.3,
                 timeout=30
-            )
-            return response.choices[0].message.content.strip()
-
-        elif self.provider == "groq":
-            response = self.groq_client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_tokens,
-                temperature=0.3
             )
             return response.choices[0].message.content.strip()
 
