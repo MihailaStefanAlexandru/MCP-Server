@@ -81,3 +81,24 @@
 29. Listează folderele din root, alege primul folder și extrage informațiile despre el.
 
 30. Listează folderele din root, găsește ID-ul folderului Sites, apoi listează conținutul acestuia.
+
+# Ierarhie
+
+curl -u admin:admin "http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/groups?maxItems=100" | python3 -m json.tool
+curl -u admin:admin "http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1/people/app_editor/groups" | python3 -m json.tool
+
+1. Vreau sa creezi un folder in root numit Companie.
+
+2. Vreau ca in folderul Company sa creezi trei subfoldere: Shared, Editorial și Published.
+
+3. Seteaza permisiuni pe subfolderul Editorial din folderul Companie astfel incat doar grupul GROUP_APP_EDITORS sa aiba acces de Editor.
+
+4. Vreau ca in folderul Editorial din folderul Companie sa creezi un fisier numit Edit.txt.
+
+5. Vreau ca in folderul Editorial din folderul Companie sa creezi un fisier numit Edit.txt.
+
+6. Vreau sa muti acum fisierul din folderul Editors in subfolderul Shared din folderul Companie.
+
+7. Vreau ca pe subfolderul Shared din folderul Companie sa aiba permisiuni de CONTRIBUTOR pentru grupul GROUP_EVERYONE.
+
+8. Vreau sa muti acum fisierul Edit.txt din folderul Editors in subfolderul Shared din folderul Companie.

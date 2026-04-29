@@ -236,7 +236,14 @@ class MCPHTTPClient:
             print(f"❌ Eroare test conexiune HTTP: {e}")
             return False
 
-    async def call_mcp_tool_http(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def call_mcp_tool_http(
+        self, 
+        tool_name: str, 
+        arguments: Dict[str, Any],
+        alfresco_username: Optional[str] = None,
+        alfresco_password: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        
         """Apelează un tool MCP prin HTTP."""
         if tool_name not in self.mcp_tools:
             return {"error": f"Tool-ul '{tool_name}' nu este disponibil"}
@@ -245,6 +252,11 @@ class MCPHTTPClient:
             return {"error": "Nu sunt conectat la serverul MCP HTTP"}
 
         url = f"{self.mcp_server_url}/mcp"
+
+        extra_headers = {}
+        if alfresco_username and alfresco_password:
+            extra_headers["X-Alfresco-Username"] = alfresco_username
+            extra_headers["X-Alfresco-Password"] = alfresco_password
 
         try:
             logger.debug(f"🔧 Apelez tool MCP HTTP: {tool_name}")
@@ -263,7 +275,7 @@ class MCPHTTPClient:
             }
             logger.debug(f"➡️ REQUEST: POST {url} {json.dumps(call_request, indent=2)}")
 
-            response = await self.http_client.post(url, json=call_request)
+            response = await self.http_client.post(url, json=call_request, headers=extra_headers)
             logger.debug(f"⬅️ RESPONSE {response.status_code} {response.reason_phrase}")
             logger.debug(f"Body: {response.text[:2000]}")
 
@@ -452,6 +464,14 @@ class MCPHTTPClient:
         elif tool_name in ("get_node_children", "browse_by_path"):
             items = data.get("items", [])
             if items:
+                # Salvează toate nodurile după nume pentru lookup ulterior
+                for item in items:
+                    item_id = item.get("id", "")
+                    item_name = item.get("name", "")
+                    if self._is_valid_uuid(item_id) and item_name:
+                        agent_state[f"node_id_{item_name.lower()}"] = item_id
+                
+                # last_node_id = primul item (comportament existent)
                 first_id = items[0].get("id", "")
                 if self._is_valid_uuid(first_id):
                     agent_state['last_node_id'] = first_id
@@ -471,10 +491,12 @@ class MCPHTTPClient:
                 agent_state['last_node_id'] = uuid_found
                 logger.info(f"State (fallback regex): last_node_id={uuid_found}")
 
-    def _build_tools_description(self) -> str:
-        """Construiește descrierea tool-urilor pentru prompt."""
+    def _build_tools_description(self, allowed_tools: Optional[List[str]] = None) -> str:
+        """Construiește descrierea tool-urilor, filtrate după allowed_tools dacă e furnizat."""
         desc = ""
         for tool_name, tool_info in self.mcp_tools.items():
+            if allowed_tools and tool_name not in allowed_tools:
+                continue
             tool_desc = tool_info.get("description", "Fără descriere")
             schema = tool_info.get("inputSchema", {})
             props = schema.get("properties", {})
@@ -531,7 +553,13 @@ class MCPHTTPClient:
             return None
 
 
-    async def analyze_intent_and_call_tools_async(self, user_input: str) -> str:
+    async def analyze_intent_and_call_tools_async(
+        self, 
+        user_input: str,
+        alfresco_username: Optional[str] = None,
+        alfresco_password: Optional[str] = None,
+        allowed_tools: Optional[List[str]] = None,
+    ) -> str:
         """
         Agent ReAct async — fiecare tool call e decis DUPĂ observarea
         rezultatului celui precedent.
@@ -547,7 +575,15 @@ class MCPHTTPClient:
         agent_scratchpad = ""   # Istoricul vizibil pentru LLM (Thought/Action/Observation)
         agent_state = {}        # UUID-uri și date reale extrase din rezultate
 
-        tools_description = self._build_tools_description()
+        effective_tools = {
+            name: info for name, info in self.mcp_tools.items()
+            if allowed_tools is None or name in allowed_tools
+        }
+
+        if not effective_tools:
+            return "ℹ️ Nu aveți permisiuni pentru tool-urile necesare acestei operațiuni."
+
+        tools_description = self._build_tools_description(allowed_tools)
 
         for step in range(max_steps):
 
@@ -589,6 +625,10 @@ Când ai terminat și ai toate informațiile:
                 agent_scratchpad += f"\nStep {step + 1}: Eroare parsare răspuns LLM.\n"
                 continue
 
+            if analysis.get("action") is None:
+                logger.info("Agent finished reasoning.")
+                break
+
             if analysis.get("action") == "final_answer":
                 answer = analysis.get("answer", "")
                 if answer:
@@ -601,8 +641,15 @@ Când ai terminat și ai toate informațiile:
                 arguments = analysis.get("arguments", {})
                 reasoning = analysis.get("reasoning", "")
 
-                if tool_name not in self.mcp_tools:
-                    agent_scratchpad += f"\nStep {step + 1}: Tool '{tool_name}' inexistent.\n"
+                # Verifică dacă tool-ul există și e permis
+                if tool_name not in effective_tools:
+                    if tool_name in self.mcp_tools:
+                        agent_scratchpad += (
+                            f"\nStep {step + 1}: Tool '{tool_name}' există dar "
+                            f"nu este permis pentru rolul tău.\n"
+                        )
+                    else:
+                        agent_scratchpad += f"\nStep {step + 1}: Tool '{tool_name}' inexistent.\n"
                     continue
 
                 # CRITICAL FIX: înlocuiește placeholder-urile cu UUID-uri reale din state
@@ -629,7 +676,12 @@ HINT: Apelează mai întâi list_root_children sau get_node_id_by_name pentru a 
                 )
 
                 # Execută tool-ul
-                raw_result = await self.call_mcp_tool_http(tool_name, arguments)
+                raw_result = await self.call_mcp_tool_http(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    alfresco_username=alfresco_username,
+                    alfresco_password=alfresco_password,
+                )
 
                 # Formatează observația pentru scratchpad
                 observation_text = self.format_tool_result(tool_name, raw_result)
@@ -693,7 +745,13 @@ Observation:
 
         raise Exception(f"Provider necunoscut: {self.provider}")
 
-    def create_enhanced_prompt(self, user_input: str, tool_results: str = "") -> str:
+    def create_enhanced_prompt(
+        self, 
+        user_input: str, 
+        tool_results: str = "",
+        user_role: Optional[str] = None,
+        alfresco_username: Optional[str] = None,
+    ) -> str:
         """Creează prompt îmbunătățit cu rezultate de la tool-uri MCP."""
         context_str = ""
         if self.session_context:
@@ -722,6 +780,12 @@ Observation:
         if tool_results and isinstance(tool_results, str) and tool_results.strip():
             tool_results_str = f"\nRezultate operațiuni MCP:\n{tool_results}\n"
 
+        role_info = ""
+        if user_role:
+            role_info = f"\nRolul utilizatorului curent: {user_role}"
+            if alfresco_username:
+                role_info += f" (cont Alfresco: {alfresco_username})"
+
         system_prompt = f"""=== CONTEXT SYSTEM ===
 
 Ești un asistent AI expert în Alfresco Document Management System cu acces la tool-uri MCP prin HTTP.
@@ -729,6 +793,7 @@ Ești un asistent AI expert în Alfresco Document Management System cu acces la 
 Server MCP: {self.mcp_server_url}
 Model: {self.provider.upper()} - {self.model}
 {connection_info}
+{role_info}
 {tools_info}
 {context_str}
 {tool_results_str}

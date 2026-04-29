@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 import httpx
 from urllib.parse import urljoin
 import base64
+import re
 
 from mcp.server import Server
 from mcp.types import (
@@ -37,7 +38,7 @@ class MinimalAlfrescoServer:
                         "properties": {
                             "maxItems": {
                                 "type": "integer",
-                                "description": "Numărul maxim de elemente de returnat (default: 10)",
+                                "description": "Numărul maxim de elemente de returnat (default: 20)",
                                 "default": 20
                             }
                         }
@@ -128,12 +129,50 @@ class MinimalAlfrescoServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "Numele nodului (fișier sau folder)"
-                            }
+                            "name": {"type": "string", "description": "Numele nodului"},
+                            "parent_folder_name": {"type": "string", "description": "Numele folderului părinte (opțional, pentru a evita ambiguitatea)"}
                         },
                         "required": ["name"]
+                    }
+                ),
+                Tool(
+                    name="upload_file",
+                    description="Creează un fișier text într-un folder specificat",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Numele fișierului (ex: Raport_Q1.txt)"
+                            },
+                            "content": {
+                                "type": "string",
+                                "description": "Conținutul textual al fișierului"
+                            },
+                            "parent_id": {
+                                "type": "string",
+                                "description": "ID-ul folderului în care se creează fișierul"
+                            }
+                        },
+                        "required": ["name", "content", "parent_id"]
+                    }
+                ),
+                Tool(
+                    name="move_node",
+                    description="Mută un fișier sau folder dintr-un folder în altul",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "node_id": {
+                                "type": "string",
+                                "description": "ID-ul nodului de mutat"
+                            },
+                            "target_parent_id": {
+                                "type": "string",
+                                "description": "ID-ul folderului destinație"
+                            }
+                        },
+                        "required": ["node_id", "target_parent_id"]
                     }
                 ),
                 Tool(
@@ -149,7 +188,62 @@ class MinimalAlfrescoServer:
                             }
                         }
                     }
-                )
+                ),
+                Tool(
+                    name="set_permissions",
+                    description="Setează permisiuni pe un folder. Roluri valide: Consumer, Contributor, Editor, Coordinator",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "node_id": {
+                                "type": "string",
+                                "description": "ID-ul folderului"
+                            },
+                            "inherit": {
+                                "type": "boolean",
+                                "description": "Dacă folderul moștenește permisiunile părintelui",
+                                "default": False
+                            },
+                            "permissions": {
+                                "type": "array",
+                                "description": "Lista de permisiuni",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "authorityId": {
+                                            "type": "string",
+                                            "description": (
+                                                "ID-ul grupului sau utilizatorului. "
+                                                "Grupurile TREBUIE să aibă prefixul GROUP_ (ex: GROUP_APP_EDITORS, GROUP_APP_VIEWER). "
+                                                "Utilizatorii se specifică direct (ex: admin, john). "
+                                                "Folosește list_groups pentru a vedea grupurile disponibile."
+                                            )
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "description": "Rol: Consumer, Contributor, Editor, Coordinator"
+                                        }
+                                    },
+                                    "required": ["authorityId", "name"]
+                                }
+                            }
+                        },
+                        "required": ["node_id", "permissions"]
+                    }
+                ),
+                Tool(
+                    name="list_groups",
+                    description="Listează grupurile din Alfresco. Returnează id-ul real al fiecărui grup — folosește acel id ca authorityId în set_permissions.",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "search": {
+                                "type": "string",
+                                "description": "Filtrează după nume (opțional, ex: 'APP')"
+                            }
+                        }
+                    }
+                ),
             ]
         
         @self.server.call_tool()
@@ -163,11 +257,11 @@ class MinimalAlfrescoServer:
                 context = ""
                 
                 if name == "list_root_children":
-                    result = await self.list_root_children(min(arguments.get("maxItems", 10), 10))
+                    result = await self.list_root_children(min(arguments.get("maxItems", 20), 10))
                     context = "root folder"
                 elif name == "get_node_children":
                     node_id = arguments["node_id"]
-                    result = await self.get_node_children(node_id, min(arguments.get("maxItems", 10), 10))
+                    result = await self.get_node_children(node_id, min(arguments.get("maxItems", 20), 10))
                     context = f"folder {node_id}"
                 elif name == "create_folder":
                     result = await self.create_folder(
@@ -306,6 +400,12 @@ class MinimalAlfrescoServer:
     
     async def create_folder(self, name: str, parent_id: str = "-root-", title: str = None, description: str = None) -> Dict[str, Any]:
         """Creează un folder nou dacă nu există deja"""
+
+        parent_id = parent_id.strip()
+
+        # Normalizează parent_id
+        if not parent_id or parent_id in ["-", "/", "root", "root-", "-root", "ROOT"]:
+            parent_id = "-root-"
 
         children = await self.get_node_children(parent_id, 100)
 
@@ -453,17 +553,18 @@ class MinimalAlfrescoServer:
             "message": f"Nodul {node_id} a fost șters {'permanent' if permanent else '(în trash)'}"
         }
     
-    async def get_node_id_by_name(self, name: str) -> Dict[str, Any]:
+    async def get_node_id_by_name(self, name: str, parent_folder_name: str = None) -> Dict[str, Any]:
         """Caută un nod după nume în repository (căutare BFS limitată)"""
 
         start_node = "-root-"
-        max_depth = 3
+        max_depth = 4
 
-        queue = [(start_node, 0)]
+        queue = [(start_node, 0, "root")]
         visited = set()
+        all_matches = []
 
         while queue:
-            node_id, depth = queue.pop(0)
+            node_id, depth, current_parent_name= queue.pop(0)
 
             if node_id in visited:
                 continue
@@ -476,21 +577,48 @@ class MinimalAlfrescoServer:
 
             for item in children.get("items", []):
                 if item["name"] == name:
-                    return {
+                    all_matches.append({
                         "error": False,
                         "node_id": item["id"],
                         "name": item["name"],
                         "type": item["type"],
-                        "parent_id": node_id
-                    }
+                        "parent_id": node_id,
+                        "parent_name": current_parent_name
+                    })
 
                 if item["type"] == "folder":
-                    queue.append((item["id"], depth + 1))
+                    queue.append((item["id"], depth + 1, item["name"]))
 
-        return {
-            "error": True,
-            "message": f"Nodul '{name}' nu a fost găsit (căutare până la depth {max_depth})"
-        }
+        if not all_matches:
+            return {"error": True, "message": f"Nodul '{name}' nu a fost găsit"}
+
+        # Dacă e specificat parent_folder_name, filtrează
+        if parent_folder_name:
+            filtered = [m for m in all_matches if m.get("parent_name") == parent_folder_name]
+            if filtered:
+                return filtered[0]
+            # Dacă nu găsim în parent-ul specificat, returnăm toate match-urile cu avertisment
+            return {
+                "error": False,
+                "node_id": all_matches[0]["node_id"],
+                "name": all_matches[0]["name"],
+                "type": all_matches[0]["type"],
+                "parent_id": all_matches[0]["parent_id"],
+                "warning": f"Nu am găsit '{name}' în '{parent_folder_name}'. Am returnat primul rezultat. Toate match-urile: {[m['parent_name'] for m in all_matches]}"
+            }
+
+        # Dacă sunt multiple match-uri fără filtru, avertizează
+        if len(all_matches) > 1:
+            return {
+                "error": False,
+                "node_id": all_matches[0]["node_id"],
+                "name": all_matches[0]["name"],
+                "type": all_matches[0]["type"],
+                "parent_id": all_matches[0]["parent_id"],
+                "warning": f"Există {len(all_matches)} noduri cu numele '{name}'. Am returnat primul. Specifică parent_folder_name pentru precizie. Găsite în: {[m['parent_name'] for m in all_matches]}"
+            }
+
+        return all_matches[0]
     
     async def browse_by_path(self, path: str = "/") -> Dict[str, Any]:
         """Navighează folosind path-ul"""
@@ -523,6 +651,194 @@ class MinimalAlfrescoServer:
             current_node = match["id"]
 
         return await self.get_node_children(current_node)
+    
+    async def upload_file(
+        self,
+        name: str,
+        content: str,
+        parent_id: str
+    ) -> Dict[str, Any]:
+        """
+        Creează un fișier text într-un folder specificat.
+        Folosește multipart/form-data conform API-ului Alfresco.
+        """
+        url = urljoin(
+            self.base_url,
+            f"/alfresco/api/-default-/public/alfresco/versions/1/nodes/{parent_id}/children"
+        )
+ 
+        # Alfresco acceptă upload prin multipart form
+        # Trebuie un client fără Content-Type: application/json pentru acest request
+        auth_string = base64.b64encode(
+            f'{self.username}:{self.password}'.encode()
+        ).decode()
+ 
+        file_content = content.encode('utf-8')
+ 
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0),
+            follow_redirects=True
+        ) as upload_client:
+            response = await upload_client.post(
+                url,
+                headers={"Authorization": f"Basic {auth_string}"},
+                files={
+                    "filedata": (name, file_content, "text/plain"),
+                    "name": (None, name),
+                    "nodeType": (None, "cm:content"),
+                },
+            )
+            response.raise_for_status()
+            result = response.json()
+ 
+        entry = result.get("entry", {})
+        return {
+            "created": True,
+            "file_id": entry.get("id"),
+            "file_name": entry.get("name"),
+            "parent_id": parent_id,
+            "size": entry.get("content", {}).get("sizeInBytes"),
+            "message": f"Fișierul '{name}' a fost creat cu succes"
+        }
+    
+    async def move_node(
+        self,
+        node_id: str,
+        target_parent_id: str
+    ) -> Dict[str, Any]:
+        """
+        Mută un nod (fișier sau folder) într-un alt folder.
+        Folosește PUT /nodes/{nodeId} cu targetParentId.
+        """
+        uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+ 
+        if not re.search(uuid_pattern, node_id, re.IGNORECASE):
+            return {"error": True, "message": f"node_id invalid: '{node_id}'"}
+        if not re.search(uuid_pattern, target_parent_id, re.IGNORECASE):
+            return {"error": True, "message": f"target_parent_id invalid: '{target_parent_id}'"}
+ 
+        url = urljoin(
+            self.base_url,
+            f"/alfresco/api/-default-/public/alfresco/versions/1/nodes/{node_id}/move"
+        )
+ 
+        move_data = {"targetParentId": target_parent_id}
+        response = await self.client.post(url, json=move_data)
+        response.raise_for_status()
+        result = response.json()
+ 
+        entry = result.get("entry", {})
+        return {
+            "moved": True,
+            "node_id": entry.get("id"),
+            "node_name": entry.get("name"),
+            "new_parent_id": target_parent_id,
+            "message": f"Nodul '{entry.get('name')}' a fost mutat cu succes"
+        }
+    
+    async def set_permissions(
+        self,
+        node_id: str,
+        permissions: List[Dict[str, str]],
+        inherit: bool = False
+    ) -> Dict[str, Any]:
+        uuid_pattern = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+        if not re.search(uuid_pattern, node_id, re.IGNORECASE):
+            return {"error": True, "message": f"node_id invalid: '{node_id}'"}
+
+        url = urljoin(
+            self.base_url,
+            f"/alfresco/api/-default-/public/alfresco/versions/1/nodes/{node_id}"
+        )
+
+        local_permissions = []
+        for perm in permissions:
+            # Acceptă "authorityId", "authority", sau orice alt câmp cu "authority"
+            authority_id = (
+                perm.get("authorityId") or
+                perm.get("authority") or
+                perm.get("authorityid") or
+                ""
+            )
+            
+            if not authority_id:
+                return {
+                    "error": True,
+                    "message": f"Permisiunea nu are câmpul 'authorityId': {perm}"
+                }
+
+            # Acceptă "name", "role", sau "permission" pentru rolul efectiv
+            role_value = (
+                perm.get("name") or
+                perm.get("role") or
+                perm.get("permission") or
+                "Consumer"
+            )
+
+            local_permissions.append({
+                "authorityId": authority_id,
+                "name": role_value,
+                "accessStatus": "ALLOWED"
+            })
+
+        permissions_data = {
+            "permissions": {
+                "isInheritanceEnabled": inherit,
+                "locallySet": local_permissions
+            }
+        }
+
+        response = await self.client.put(url, json=permissions_data)
+        response.raise_for_status()
+        result = response.json()
+
+        entry = result.get("entry", {})
+        set_perms = entry.get("permissions", {}).get("locallySet", [])
+
+        return {
+            "success": True,
+            "node_id": node_id,
+            "node_name": entry.get("name"),
+            "inheritance_enabled": inherit,
+            "permissions_set": [
+                {"authority": p.get("authorityId"), "role": p.get("name")}
+                for p in set_perms
+            ],
+            "message": (
+                f"Permisiuni setate pe '{entry.get('name')}': "
+                f"moștenire={'activă' if inherit else 'dezactivată'}, "
+                f"{len(local_permissions)} permisiuni explicite"
+            )
+        }
+    
+    async def list_groups(self, search: str = "") -> Dict[str, Any]:
+        """Listează grupurile din Alfresco"""
+        url = urljoin(
+            self.base_url,
+            "/alfresco/api/-default-/public/alfresco/versions/1/groups"
+        )
+        params = {"maxItems": 100, "skipCount": 0}
+        if search:
+            params["where"] = f'(displayName matches "{search}*")'
+        
+        response = await self.client.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        
+        groups = []
+        for entry in data.get("list", {}).get("entries", []):
+            g = entry["entry"]
+            groups.append({
+                "id": g.get("id"),           # Acesta e authorityId real
+                "displayName": g.get("displayName")
+            })
+        
+        return {
+            "groups": groups,
+            "total": len(groups),
+            "message": f"Am găsit {len(groups)} grupuri",
+            "hint": "Folosește câmpul 'id' ca authorityId în set_permissions"
+        }
         
     def format_simple_response(self, result: Any, context: str = "") -> Dict[str, Any]:
         """Formatează un răspuns simplificat, text-based, pentru modele LLM mici"""

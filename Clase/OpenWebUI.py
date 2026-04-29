@@ -102,7 +102,14 @@ class OpenWebUIHTTPAdapter:
             self.last_activity = current_time
             return self.llm_client
 
-    async def process_chat_async(self, messages: List[ChatMessage]) -> str:
+    async def process_chat_async(
+        self, 
+        messages: List[ChatMessage],
+        alfresco_username: Optional[str] = None,
+        alfresco_password: Optional[str] = None,
+        allowed_tools: Optional[List[str]] = None,
+        user_role: Optional[str] = None,
+    ) -> str:
         """
         Procesează chat-ul cu server MCP HTTP - TRATEAZĂ tool_results ca STRING
         """
@@ -131,7 +138,12 @@ class OpenWebUIHTTPAdapter:
                 
                 # Analizează și apelează tool-uri MCP prin HTTP
                 logger.info("🛠️ Apelez tools MCP prin HTTP...")
-                tool_results = await client.analyze_intent_and_call_tools_async(user_message)
+                tool_results = await client.analyze_intent_and_call_tools_async(
+                    user_message,
+                    alfresco_username=alfresco_username,
+                    alfresco_password=alfresco_password,
+                    allowed_tools=allowed_tools,
+                )
                 logger.info(f"✅ Tool HTTP results: {type(tool_results)} - {len(tool_results) if isinstance(tool_results, str) else 'Not string'} caractere")
                 
                 # Creează context pentru răspunsul final
@@ -147,7 +159,12 @@ class OpenWebUIHTTPAdapter:
                 
                 # Creează prompt îmbunătățit
                 logger.info("📋 Creez prompt îmbunătățit pentru HTTP...")
-                enhanced_prompt = client.create_enhanced_prompt(user_message, tool_results)
+                enhanced_prompt = client.create_enhanced_prompt(
+                    user_message, 
+                    tool_results,
+                    user_role=user_role,
+                    alfresco_username=alfresco_username,
+                )
                 
                 if context_str:
                     enhanced_prompt = enhanced_prompt.replace(

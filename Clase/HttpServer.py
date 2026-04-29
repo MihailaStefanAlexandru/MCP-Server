@@ -2,6 +2,7 @@
 Server MCP pentru Alfresco - versiune HTTP REST API (CORECTATĂ)
 """
 import asyncio
+import base64
 import uvicorn
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException, Request
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
 import mcp.types as types
+import httpx
 
 from Clase.MinimalAlfrescoServer import MinimalAlfrescoServer
 
@@ -32,8 +34,8 @@ class MCPNotification(BaseModel):
 class HTTPAlfrescoMCPServer:
     def __init__(self, base_url: str, username: str, password: str, port: int = 8002):
         self.base_url = base_url
-        self.username = username
-        self.password = password
+        self.default_username = username
+        self.default_password = password
         self.port = port
 
         self.alfresco_server = MinimalAlfrescoServer(
@@ -191,17 +193,120 @@ class HTTPAlfrescoMCPServer:
                         }
                     }
                 }
+            },
+            {
+                "name": "upload_file",
+                "description": "Creează un fișier text într-un folder specificat",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string", "description": "Numele fișierului (ex: Raport_Q1.txt)"},
+                        "content": {"type": "string", "description": "Conținutul textual al fișierului"},
+                        "parent_id": {"type": "string", "description": "ID-ul folderului în care se creează fișierul"}
+                    },
+                    "required": ["name", "content", "parent_id"]
+                }
+            },
+            {
+                "name": "move_node",
+                "description": "Mută un fișier sau folder dintr-un folder în altul",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "node_id": {"type": "string", "description": "ID-ul nodului de mutat"},
+                        "target_parent_id": {"type": "string", "description": "ID-ul folderului destinație"}
+                    },
+                    "required": ["node_id", "target_parent_id"]
+                }
+            },
+            {
+                "name": "set_permissions",
+                "description": "Setează permisiuni pe un folder: dezactivează moștenirea și adaugă permisiuni explicite",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "node_id": {"type": "string", "description": "ID-ul folderului"},
+                        "inherit": {"type": "boolean", "description": "Dacă folderul moștenește permisiunile părintelui", "default": False},
+                        "permissions": {
+                            "type": "array",
+                            "description": "Lista de permisiuni",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "authorityId": {"type": "string", "description": "Grup (ex: GROUP_Viewer) sau user (ex: app_viewer)"},
+                                    "name": {"type": "string", "description": "Rol: Consumer, Contributor, Editor, Coordinator"}
+                                },
+                                "required": ["authorityId", "name"]
+                            }
+                        }
+                    },
+                    "required": ["node_id", "permissions"]
+                }
+            },
+            {
+                "name": "list_groups",
+                "description": "Listează grupurile din Alfresco. Returnează id-ul real al fiecărui grup — folosește acel id ca authorityId în set_permissions.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "search": {
+                            "type": "string",
+                            "description": "Filtrează după nume (opțional, ex: 'APP')"
+                        }
+                    }
+                }
             }
         ]
+    
+    def _create_alfresco_server_for_credentials(
+        self,
+        username: str,
+        password: str
+    ) -> MinimalAlfrescoServer:
+        """
+        Creează un server Alfresco temporar cu credențialele specificate.
+        Folosit pentru request-uri cu roluri diferite de admin.
+        """
+        server = MinimalAlfrescoServer(
+            base_url=self.base_url,
+            username=username,
+            password=password
+        )
+        return server
 
     def setup_routes(self):
         """Configurează rutele HTTP pentru protocolul MCP"""
 
         @self.app.post("/mcp", response_model=MCPResponse)
-        async def handle_mcp_request(request: MCPRequest):
-            """Handler principal pentru cereri MCP JSON-RPC"""
+        async def handle_mcp_request(request: MCPRequest, raw_request: Request):
+            """
+            Handler principal MCP JSON-RPC.
+ 
+            Citește opțional headerele:
+            - X-Alfresco-Username: contul tehnic pentru rolul userului
+            - X-Alfresco-Password: parola contului tehnic
+ 
+            Dacă sunt prezente, execută operațiunile cu acele credențiale.
+            Dacă nu, folosește credențialele default din config.
+            """
             try:
                 print(f"📥 Cerere MCP: {request.method}")
+
+                # Extrage credențialele din headere (dacă există)
+                alfresco_username = raw_request.headers.get("X-Alfresco-Username")
+                alfresco_password = raw_request.headers.get("X-Alfresco-Password")
+
+                # Determină serverul Alfresco de folosit
+                if alfresco_username and alfresco_password:
+                    # Credențiale per-rol din header
+                    alfresco_srv = self._create_alfresco_server_for_credentials(
+                        alfresco_username, alfresco_password
+                    )
+                    print(f"🔐 Folosesc credențiale din header: {alfresco_username}")
+                else:
+                    # Credențiale default din config
+                    alfresco_srv = self.alfresco_server
+                    print(f"🔐 Folosesc credențiale default: {self.default_username}")
 
                 # Procesează cererea în funcție de metodă
                 if request.method == "initialize":
@@ -209,7 +314,7 @@ class HTTPAlfrescoMCPServer:
                 elif request.method == "tools/list":
                     result = await self.handle_tools_list()
                 elif request.method == "tools/call":
-                    result = await self.handle_tools_call(request.params or {})
+                    result = await self.handle_tools_call(request.params or {}, alfresco_srv)
                 elif request.method == "resources/list":
                     result = await self.handle_resources_list()
                 elif request.method == "resources/read":
@@ -354,8 +459,26 @@ class HTTPAlfrescoMCPServer:
         except Exception as e:
             print(f"❌ Eroare la listarea tool-urilor: {e}")
             return {"tools": []}
+        
+    def _format_result(self, result) -> Dict[str, Any]:
+        """Formatează rezultatul conform protocolului MCP cu JSON corect."""
+        import json
+        if isinstance(result, str):
+            return {"content": [{"type": "text", "text": result}]}
+        elif isinstance(result, dict) and "content" in result:
+            return result
+        elif isinstance(result, dict):
+            # IMPORTANT: json.dumps în loc de str() pentru a evita Python repr cu single quotes
+            return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+        elif isinstance(result, list):
+            if all(isinstance(r, dict) and "type" in r for r in result):
+                return {"content": result}
+            else:
+                return {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+        else:
+            return {"content": [{"type": "text", "text": str(result)}]}
     
-    async def handle_tools_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_tools_call(self, params: Dict[str, Any], alfresco_srv: MinimalAlfrescoServer) -> Dict[str, Any]:
         """Execută un tool MCP - SOLUȚIA CORECTATĂ"""
 
         if not self.initialized:
@@ -376,100 +499,92 @@ class HTTPAlfrescoMCPServer:
         
         try:
             # SOLUȚIA: Apelează direct metodele din MinimalAlfrescoServer în loc să accesezi handler-urile MCP
-            result = await self._execute_tool_directly(tool_name, arguments)
+            result = await self._execute_tool_directly(tool_name, arguments, alfresco_srv)
 
-            # Formatează rezultatul conform protocolului MCP
-            if isinstance(result, str):
+            return self._format_result(result)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 403:
+                # Eroare de permisiuni — returnăm mesaj clar în loc să aruncăm excepție
+                print(f"⛔ Acces interzis pentru {tool_name}: {e}")
                 return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": result
-                        }
-                    ]
+                    "content": [{
+                        "type": "text",
+                        "text": str({
+                            "error": True,
+                            "code": 403,
+                            "message": f"Acces interzis: contul tău nu are permisiuni pentru această operațiune ({tool_name}). Contactează administratorul."
+                        })
+                    }]
                 }
-            elif isinstance(result, dict) and "content" in result:
-                # Dacă rezultatul are deja formatul MCP
-                return result
-            elif isinstance(result, dict):
-                # Convertim dict-ul într-un format MCP
-                return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": str(result)
-                        }
-                    ]
-                }
-            elif isinstance(result, list):
-                # Dacă elementele sunt dict, le returnezi direct
-                if all(isinstance(r, dict) and "type" in r for r in result):
-                    return {
-                        "content": result
-                    }
-                # Dacă sunt obiecte arbitrare, le convertim în stringuri
-                else:
-                    return {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": str(r)
-                            } for r in result
-                        ]
-                    }
-            else:
-                return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": str(result)
-                        }
-                    ]
-                }
-            
+            raise
         except Exception as e:
             print(f"❌ Eroare execuție tool {tool_name}: {e}")
             raise HTTPException(status_code=500, detail=f"Eroare execuție tool: {str(e)}")
 
-    async def _execute_tool_directly(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def _execute_tool_directly(self, tool_name: str, arguments: Dict[str, Any], alfresco_srv: MinimalAlfrescoServer) -> Any:
         """Execută direct metodele din MinimalAlfrescoServer fără să treacă prin serverul MCP"""
         
         # Asigură-te că conexiunea este stabilită
-        await self.alfresco_server.ensure_connection()
+        await alfresco_srv.ensure_connection()
         
         # Mapează tool-urile la metodele corespunzătoare
         if tool_name == "list_root_children":
             max_items = arguments.get("maxItems", 20)
-            return await self.alfresco_server.list_root_children(max_items)
+            return await alfresco_srv.list_root_children(max_items)
             
         elif tool_name == "get_node_children":
             node_id = arguments["node_id"]
             max_items = arguments.get("maxItems", 20)
-            return await self.alfresco_server.get_node_children(node_id, max_items)
+            return await alfresco_srv.get_node_children(node_id, max_items)
             
         elif tool_name == "create_folder":
             name = arguments["name"]
             parent_id = arguments.get("parent_id", "-root-")
             title = arguments.get("title")
             description = arguments.get("description")
-            return await self.alfresco_server.create_folder(name, parent_id, title, description)
+            return await alfresco_srv.create_folder(name, parent_id, title, description)
             
         elif tool_name == "get_node_info":
             node_id = arguments["node_id"]
-            return await self.alfresco_server.get_node_info(node_id)
+            return await alfresco_srv.get_node_info(node_id)
             
         elif tool_name == "delete_node":
             node_id = arguments["node_id"]
             permanent = arguments.get("permanent", False)
-            return await self.alfresco_server.delete_node(node_id, permanent)
+            return await alfresco_srv.delete_node(node_id, permanent)
             
         elif tool_name == "get_node_id_by_name":
-            name = arguments["name"]
-            return await self.alfresco_server.get_node_id_by_name(name)
+            return await alfresco_srv.get_node_id_by_name(
+                arguments["name"],
+                arguments.get("parent_folder_name")
+            )
             
         elif tool_name == "browse_by_path":
             path = arguments.get("path", "/")
-            return await self.alfresco_server.browse_by_path(path)
+            return await alfresco_srv.browse_by_path(path)
+        
+        elif tool_name == "upload_file":
+            return await alfresco_srv.upload_file(
+                arguments["name"],
+                arguments["content"],
+                arguments["parent_id"]
+            )
+        
+        elif tool_name == "move_node":
+            return await alfresco_srv.move_node(
+                arguments["node_id"],
+                arguments["target_parent_id"]
+            )
+        
+        elif tool_name == "set_permissions":
+            return await alfresco_srv.set_permissions(
+                arguments["node_id"],
+                arguments["permissions"],
+                arguments.get("inherit", False)
+            )
+        
+        elif tool_name == "list_groups":
+            return await alfresco_srv.list_groups(arguments.get("search", ""))
             
         else:
             raise ValueError(f"Tool necunoscut: {tool_name}")

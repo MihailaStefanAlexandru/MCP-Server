@@ -8,11 +8,20 @@ import sys
 import time
 import uuid
 import logging
-from fastapi import FastAPI, HTTPException
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from Clase.OpenWebUI import OpenWebUIHTTPAdapter
 from Clase.OpenWebUI import ChatRequest
+from pydantic import BaseModel, Field
+
+from Clase.Authen import (
+    UserManager, UserRole, User, TokenData,
+    init_auth, create_access_token, verify_access_token,
+    get_alfresco_credentials_for_role, get_allowed_tools_for_role,
+    extract_token_from_header,
+)
 
 # Configurare logging
 logging.basicConfig(
@@ -20,6 +29,32 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+CONFIG_PATH = "llm_config.json"
+
+# Modele Pydantic
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    username: str
+    role: str
+
+class CreateUserRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=6)
+    role: UserRole = UserRole.VIEWER
+
+class UpdatePasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=6)
+
+class UpdateRoleRequest(BaseModel):
+    role: UserRole
 
 # Instanța globală a adapter-ului HTTP
 openwebui_adapter = None
@@ -45,6 +80,7 @@ async def startup_event():
     """Inițializează adapter-ul HTTP la pornire"""
     global openwebui_adapter
     try:
+        init_auth(CONFIG_PATH)
         openwebui_adapter = OpenWebUIHTTPAdapter()
         logger.info("🚀 OpenWebUI HTTP Adapter pornit!")
         
@@ -67,6 +103,169 @@ async def shutdown_event():
         await openwebui_adapter.cleanup()
         logger.info("🛑 OpenWebUI HTTP Adapter oprit")
 
+# Dependențe JWT
+
+async def get_current_user(
+    authorization: Optional[str] = Header(None),
+    x_api_key: Optional[str] = Header(None, alias="x-api-key"),
+) -> TokenData:
+    # Încearcă mai întâi Authorization: Bearer
+    token = extract_token_from_header(authorization) if authorization else None
+    
+    # Fallback pe X-Api-Key (cum trimite OpenWebUI)
+    if not token and x_api_key:
+        token = x_api_key
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Lipsește autentificarea")
+    
+    token_data = verify_access_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Token invalid sau expirat")
+    
+    return token_data
+
+async def require_admin(
+    current_user: TokenData = Depends(get_current_user)
+) -> TokenData:
+    """Permite accesul doar utilizatorilor cu rol admin."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Necesită rol admin")
+    return current_user
+
+# Authen Endpoints
+
+@app.post("/auth/login", response_model=LoginResponse, tags=["Auth"])
+async def login(request: LoginRequest):
+    """
+    Autentifică un utilizator și returnează un JWT.
+ 
+    Trimite username și parolă, primești un token pe care îl folosești
+    în toate cererile ulterioare în header-ul Authorization: Bearer <token>
+    """
+    user = UserManager.authenticate(request.username, request.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credențiale invalide")
+ 
+    token = create_access_token(user)
+    logger.info(f"🔐 Login: {user.username} (rol: {user.role.value})")
+ 
+    from Clase.Authen import JWT_EXPIRE_HOURS
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=JWT_EXPIRE_HOURS * 3600,
+        username=user.username,
+        role=user.role.value,
+    )
+
+@app.get("/auth/me", tags=["Auth"])
+async def get_me(current_user: TokenData = Depends(get_current_user)):
+    """Informații despre utilizatorul autentificat curent."""
+    user = UserManager.get(current_user.username)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilizatorul nu mai există")
+    return {
+        "username":        user.username,
+        "role":            user.role.value,
+        "allowed_tools":   get_allowed_tools_for_role(user.role),
+        "alfresco_account": get_alfresco_credentials_for_role(user.role)["username"],
+    }
+
+@app.post("/auth/change-password", tags=["Auth"])
+async def change_password(
+    request: UpdatePasswordRequest,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Schimbă propria parolă."""
+    ok = UserManager.update_password(current_user.username, request.new_password)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Eroare actualizare parolă")
+    return {
+        "message": "Parola actualizată cu succes"
+    }
+
+# Admin Endpoints
+
+@app.get("/admin/users", tags=["Admin"])
+async def list_users(_: TokenData = Depends(require_admin)):
+    """Listează toți utilizatorii. Necesită rol admin."""
+    users = UserManager.list_all()
+    return {
+        "users": [
+            {
+                **u,
+                "alfresco_account": get_alfresco_credentials_for_role(
+                    UserRole(u["role"])
+                )["username"],
+                "allowed_tools": get_allowed_tools_for_role(UserRole(u["role"])),
+            }
+            for u in users
+        ],
+        "total": len(users),
+    }
+
+@app.post("/admin/users", tags=["Admin"])
+async def create_user(
+    request: CreateUserRequest,
+    _: TokenData = Depends(require_admin)
+):
+    """Creează un utilizator nou. Necesită rol admin."""
+    try:
+        user = UserManager.create(request.username, request.password, request.role)
+        logger.info(f"👤 Utilizator creat: {user.username} (rol: {user.role.value})")
+        return {
+            "username": user.username,
+            "role":     user.role.value,
+            "message":  f"Utilizatorul '{user.username}' creat cu succes"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+@app.patch("/admin/users/{username}/role", tags=["Admin"])
+async def update_role(
+    username: str,
+    request: UpdateRoleRequest,
+    _: TokenData = Depends(require_admin)
+):
+    """Schimbă rolul unui utilizator. Necesită rol admin."""
+    if not UserManager.get(username):
+        raise HTTPException(status_code=404, detail="Utilizatorul nu există")
+    UserManager.update_role(username, request.role)
+    return {
+        "message": f"Rol actualizat: {username} → {request.role.value}"
+    }
+
+@app.patch("/admin/users/{username}/password", tags=["Admin"])
+async def admin_reset_password(
+    username: str,
+    request: UpdatePasswordRequest,
+    _: TokenData = Depends(require_admin)
+):
+    """Resetează parola unui utilizator. Necesită rol admin."""
+    if not UserManager.get(username):
+        raise HTTPException(status_code=404, detail="Utilizatorul nu există")
+    UserManager.update_password(username, request.new_password)
+    return {
+        "message": f"Parola resetată pentru '{username}'"
+    }
+
+@app.delete("/admin/users/{username}", tags=["Admin"])
+async def delete_user(
+    username: str,
+    admin_user: TokenData = Depends(require_admin)
+):
+    """Șterge un utilizator. Necesită rol admin. Nu poți șterge propriul cont."""
+    if username == admin_user.username:
+        raise HTTPException(status_code=400, detail="Nu poți șterge propriul cont")
+    if not UserManager.delete(username):
+        raise HTTPException(status_code=404, detail="Utilizatorul nu există")
+    return {
+        "message": f"Utilizatorul '{username}' șters"
+    }
+
+# Endpoints deja existente acum cu JWT
+
 @app.get("/")
 async def root():
     """Endpoint de test îmbunătățit pentru HTTP"""
@@ -77,7 +276,7 @@ async def root():
     status = await openwebui_adapter.get_mcp_status()
     return {
         "message": "OpenWebUI HTTP Adapter cu client LLM prin HTTP",
-        "version": "3.0.0",
+        "version": "4.0.0",
         "connection_type": "HTTP",
         "mcp_connected": status.get("connected", False),
         "mcp_server_url": status.get("server_url", "unknown"),
@@ -86,6 +285,10 @@ async def root():
         "llm_model": status.get("model", "unknown"),
         "healthy": status.get("healthy", False),
         "endpoints": {
+            "login": "POST /auth/login",
+            "me": "GET  /auth/me",
+            "change_password": "POST /auth/change-password",
+            "admin_users": "GET  /admin/users",
             "models": "/v1/models",
             "chat": "/v1/chat/completions", 
             "status": "/v1/mcp/status",
@@ -105,7 +308,7 @@ async def health_check():
     status = await openwebui_adapter.get_mcp_status()
     
     if status.get("healthy") and status.get("connected"):
-        return {"status": "healthy", "connection_type": "HTTP", "details": status}
+        return {"status": "healthy", "auth": "JWT enabled", "connection_type": "HTTP", "details": status}
     else:
         raise HTTPException(status_code=503, detail={"status": "unhealthy", "connection_type": "HTTP", "details": status})
 
@@ -159,7 +362,7 @@ async def list_models():
     return response
 
 @app.post("/v1/chat/completions")
-async def chat_completions(request: ChatRequest):
+async def chat_completions(request: ChatRequest, current_user: TokenData = Depends(get_current_user)):
     """
     Endpoint principal pentru chat HTTP - cu suport pentru streaming
     """
@@ -176,11 +379,19 @@ async def chat_completions(request: ChatRequest):
         logger.error("❌ Nu s-au primit mesaje pentru HTTP")
         raise HTTPException(status_code=400, detail="Nu s-au primit mesaje")
     
+    alfresco_creds = get_alfresco_credentials_for_role(current_user.role)
+    allowed_tools  = get_allowed_tools_for_role(current_user.role)
+
+    logger.info(
+        f"🔐 Alfresco: {alfresco_creds['username']} | "
+        f"Tools permise: {allowed_tools}"
+    )
+    
     # Dacă este cerere pentru streaming, folosim StreamingResponse
     if request.stream:
         logger.info("🌊 Folosesc streaming HTTP response")
         return StreamingResponse(
-            stream_chat_response_http(request, openwebui_adapter),
+            stream_chat_response_http(request, openwebui_adapter, current_user, alfresco_creds, allowed_tools),
             media_type="text/plain",
             headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
         )
@@ -195,7 +406,13 @@ async def chat_completions(request: ChatRequest):
         start_time = time.time()
         logger.info("🔄 Încep procesarea chat-ului HTTP...")
         
-        response_content = await openwebui_adapter.process_chat_async(request.messages)
+        response_content = await openwebui_adapter.process_chat_async(
+            request.messages,
+            alfresco_username=alfresco_creds["username"],
+            alfresco_password=alfresco_creds["password"],
+            allowed_tools=allowed_tools,
+            user_role=current_user.role.value,
+        )
         
         process_time = time.time() - start_time
         logger.info(f"⏱️ Procesarea HTTP a durat {process_time:.2f}s")
@@ -261,7 +478,7 @@ async def chat_completions(request: ChatRequest):
         
         return error_response
 
-async def stream_chat_response_http(request: ChatRequest, adapter: OpenWebUIHTTPAdapter):
+async def stream_chat_response_http(request: ChatRequest, adapter: OpenWebUIHTTPAdapter, current_user, alfresco_creds, allowed_tools):
     """
     Generator pentru streaming response HTTP - compatibil cu OpenWebUI
     """
@@ -270,7 +487,13 @@ async def stream_chat_response_http(request: ChatRequest, adapter: OpenWebUIHTTP
         
         # Procesează chat-ul prin HTTP
         start_time = time.time()
-        response_content = await adapter.process_chat_async(request.messages)
+        response_content = await adapter.process_chat_async(
+            request.messages,
+            alfresco_username=alfresco_creds["username"],
+            alfresco_password=alfresco_creds["password"],
+            allowed_tools=allowed_tools,
+            user_role=current_user.role.value,
+        )
         process_time = time.time() - start_time
         
         logger.info(f"⏱️ Procesarea streaming HTTP a durat {process_time:.2f}s")
@@ -359,28 +582,42 @@ async def stream_chat_response_http(request: ChatRequest, adapter: OpenWebUIHTTP
 
 # Endpoint-urile de management pentru HTTP
 @app.get("/v1/mcp/status")
-async def mcp_status():
+async def mcp_status(current_user: TokenData = Depends(get_current_user)):
     """Status al conexiunii MCP HTTP"""
     global openwebui_adapter
     
     if not openwebui_adapter:
         raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
-    return await openwebui_adapter.get_mcp_status()
+    status = await openwebui_adapter.get_mcp_status()
+    creds  = get_alfresco_credentials_for_role(current_user.role)
+    status["your_role"]       = current_user.role.value
+    status["alfresco_account"] = creds["username"]
+    status["allowed_tools"]   = get_allowed_tools_for_role(current_user.role)
+
+    return status
 
 @app.get("/v1/mcp/tools")
-async def list_mcp_tools():
+async def list_mcp_tools(current_user: TokenData = Depends(get_current_user)):
     """Lista tool-urilor MCP HTTP disponibile"""
     global openwebui_adapter
     
     if not openwebui_adapter:
         raise HTTPException(status_code=503, detail="HTTP Adapter nu este inițializat")
     
-    tools = await openwebui_adapter.get_available_tools()
-    return {"tools": tools, "count": len(tools), "connection_type": "HTTP"}
+    all_tools = await openwebui_adapter.get_available_tools()
+    allowed   = get_allowed_tools_for_role(current_user.role)
+    filtered  = [t for t in all_tools if t["name"] in allowed]
+
+    return {
+        "tools":   filtered,
+        "count":   len(filtered),
+        "role":    current_user.role.value,
+        "note":    f"{len(filtered)}/{len(all_tools)} tool-uri pentru rolul '{current_user.role.value}'"
+    }
 
 @app.post("/v1/mcp/restart")
-async def restart_mcp_client():
+async def restart_mcp_client(_: TokenData = Depends(require_admin)):
     """Restart clientul LLM HTTP cu MCP"""
     global openwebui_adapter
     
